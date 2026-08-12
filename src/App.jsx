@@ -53,6 +53,7 @@ const ACCT_COLORS = {
 };
 const EXPENSE_PALETTE = ["#F87171","#60A5FA","#34D399","#FBBF24","#A78BFA","#F472B6","#2DD4BF","#FB923C","#818CF8","#4ADE80"];
 const PAYMENT_METHODS = ["現金","行動支付","刷卡","禮券"];
+const COMMON_EXPENSE_CATEGORIES = ["餐飲","交通","娛樂","購物","居家","醫療","教育","治裝","其他"];
 const CAT_COLORS = {
   "台股":"#F87171","美股":"#60A5FA","現金":"#34D399",
   "外幣":"#FBBF24","基金":"#A78BFA","保險":"#2DD4BF","其他":"#9CA3AF",
@@ -616,6 +617,20 @@ export default function AssetTracker() {
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
   };
 
+  const addCommonExpenseCategories = async () => {
+    const existing = new Set(expenseCategories.map(c=>c.name));
+    const toAdd = COMMON_EXPENSE_CATEGORIES.filter(n=>!existing.has(n));
+    if (!toAdd.length) return;
+    try {
+      const results = await Promise.all(toAdd.map((name,i)=>apiPost({
+        action:"addExpenseCategory",
+        payload:{name,sort_order:expenseCategories.length+i,active:true}
+      })));
+      setExpenseCategories(p=>[...p,...results]);
+      showToast(`已新增 ${results.length} 個常用分類`);
+    } catch(e) { showToast("新增失敗："+e.message,"error"); }
+  };
+
   const deleteExpenseCategory = async (id) => {
     try {
       await apiPost({action:"deleteExpenseCategory", id});
@@ -1154,6 +1169,20 @@ export default function AssetTracker() {
             <div style={{textAlign:"center",color:T.muted,padding:"20px 0",fontSize:13}}>本月尚無支出紀錄</div>
           )}
 
+          {/* 分類是空的時，先提示一鍵新增常用分類 */}
+          {expenseCategories.length===0&&(
+            <div style={{
+              background:T.card,borderRadius:12,padding:14,marginBottom:16,
+              border:`1px dashed ${T.border}`
+            }}>
+              <div style={{fontSize:12,color:T.muted,marginBottom:10}}>還沒有任何消費分類，先一次加幾個常用的：</div>
+              <button onClick={addCommonExpenseCategories} style={{
+                width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:8,
+                padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"
+              }}>＋ 一次加入常用分類（{COMMON_EXPENSE_CATEGORIES.join("、")}）</button>
+            </div>
+          )}
+
           {/* 快速新增 */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
@@ -1261,7 +1290,15 @@ export default function AssetTracker() {
                       }}>刪除</button>
                     </div>
                   ))}
-                  {expenseCategories.length===0&&<div style={{fontSize:12,color:T.muted}}>還沒有分類，新增一個開始吧（例如：餐飲、交通、娛樂）</div>}
+                  {expenseCategories.length===0&&(
+                    <div>
+                      <div style={{fontSize:12,color:T.muted,marginBottom:10}}>還沒有分類，新增一個開始吧，或：</div>
+                      <button onClick={addCommonExpenseCategories} style={{
+                        background:T.accent,color:"#fff",border:"none",borderRadius:8,
+                        padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit"
+                      }}>＋ 一次加入常用分類</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1282,37 +1319,42 @@ export default function AssetTracker() {
         padding:"32px 20px 28px",
         borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:24}}>
-          <div>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
-              {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-              {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
-            </div>
-            <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
+            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
+            {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}>
-            <button onClick={()=>setPage("history")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-            }}>📈 歷史</button>
-            <button onClick={()=>setPage("breakdown")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-            }}>📊 分類</button>
-            <button onClick={()=>setPage("bills")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-            }}>🧾 帳單</button>
-            <button onClick={()=>setPage("expenses")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-            }}>📒 記帳</button>
-            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-              background:T.accent,border:"none",borderRadius:10,
-              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
-              opacity:snapshotting?0.6:1
-            }}>{snapshotting?"...":"📸 快照"}</button>
-          </div>
+          <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
+        </div>
+
+        {/* 橫向導覽列 */}
+        <div style={{display:"flex",gap:8,marginBottom:24}}>
+          <button onClick={()=>setPage("history")} style={{
+            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4
+          }}><span style={{fontSize:18}}>📈</span>歷史</button>
+          <button onClick={()=>setPage("breakdown")} style={{
+            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4
+          }}><span style={{fontSize:18}}>📊</span>分類</button>
+          <button onClick={()=>setPage("bills")} style={{
+            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4
+          }}><span style={{fontSize:18}}>🧾</span>帳單</button>
+          <button onClick={()=>setPage("expenses")} style={{
+            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4
+          }}><span style={{fontSize:18}}>📒</span>記帳</button>
+          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
+            flex:1,background:T.accent,border:"none",borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:"#fff",fontWeight:700,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+            opacity:snapshotting?0.6:1
+          }}><span style={{fontSize:18}}>📸</span>{snapshotting?"...":"快照"}</button>
         </div>
 
         {/* Donut + legend */}
