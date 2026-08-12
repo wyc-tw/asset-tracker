@@ -1,0 +1,22 @@
+# 相依套件（用 npm install 就會重新產生，不用進版控）
+node_modules/
+
+# build 產出（用 npm run build / npm run deploy 就會重新產生）
+dist/
+dist-ssr/
+
+# 環境變數（如果之後把 SHEETS_API_TOKEN 之類的敏感資訊改用 .env 管理）
+.env
+.env.local
+.env.*.local
+
+# 編輯器/系統產生的雜項檔案
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.vscode/
+.idea/
+
+# Vite 快取
+.vite/
