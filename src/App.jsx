@@ -687,19 +687,31 @@ export default function AssetTracker() {
     <div style={pageStyle}>
       {toast&&<Toast toast={toast}/>}
       {/* Header */}
-      <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
-        <button onClick={()=>setPage("main")} style={{
-          background:"none",border:`1px solid ${T.border}`,borderRadius:10,
-          padding:"8px 14px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted
-        }}>← 返回</button>
-        <h2 style={{margin:0,fontSize:18,fontWeight:800,flex:1}}>歷史資產變化</h2>
-        <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-          background:T.accent,color:"#fff",border:"none",borderRadius:20,
-          padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:snapshotting?0.6:1
-        }}>{snapshotting?"記錄中...":"📸 今日"}</button>
+      <div style={{
+        background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
+        padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
+        display:"flex",alignItems:"center",justifyContent:"space-between"
+      }}>
+        <div>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>
+            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
+          </div>
+          <div style={{fontSize:20,fontWeight:800}}>歷史資產變化</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
+            background:T.accent,color:"#fff",border:"none",borderRadius:10,
+            padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:snapshotting?0.6:1
+          }}>{snapshotting?"...":"📸 今日"}</button>
+          <button onClick={()=>setPage("main")} style={{
+            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
+          }}>🏠 首頁</button>
+        </div>
       </div>
 
-      <div style={{padding:"0 20px"}}>
+
+      <div style={{padding:"20px 20px 40px"}}>
         {snapshots.length===0?(
           <div style={{textAlign:"center",padding:"60px 20px",background:T.surface,borderRadius:20,border:`1px solid ${T.border}`}}>
             <div style={{fontSize:48,marginBottom:16}}>📸</div>
@@ -818,7 +830,7 @@ export default function AssetTracker() {
         <button onClick={()=>setPage("main")} style={{
           background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
           padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-        }}>← 返回</button>
+        }}>🏠 首頁</button>
       </div>
 
       <div style={{padding:"20px 16px 40px"}}>
@@ -945,7 +957,7 @@ export default function AssetTracker() {
           <button onClick={()=>setPage("main")} style={{
             background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
             padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>← 返回</button>
+          }}>🏠 首頁</button>
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1135,7 +1147,7 @@ export default function AssetTracker() {
           <button onClick={()=>setPage("main")} style={{
             background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
             padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>← 返回</button>
+          }}>🏠 首頁</button>
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1329,6 +1341,12 @@ export default function AssetTracker() {
 
         {/* 橫向導覽列 */}
         <div style={{display:"flex",gap:8,marginBottom:24}}>
+          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
+            flex:1,background:T.accent,border:"none",borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:"#fff",fontWeight:700,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+            opacity:snapshotting?0.6:1
+          }}><span style={{fontSize:18}}>📸</span>{snapshotting?"...":"快照"}</button>
           <button onClick={()=>setPage("history")} style={{
             flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
             padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
@@ -1349,12 +1367,6 @@ export default function AssetTracker() {
             padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
             display:"flex",flexDirection:"column",alignItems:"center",gap:4
           }}><span style={{fontSize:18}}>📒</span>記帳</button>
-          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-            flex:1,background:T.accent,border:"none",borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:"#fff",fontWeight:700,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-            opacity:snapshotting?0.6:1
-          }}><span style={{fontSize:18}}>📸</span>{snapshotting?"...":"快照"}</button>
         </div>
 
         {/* Donut + legend */}
