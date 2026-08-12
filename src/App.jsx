@@ -51,6 +51,8 @@ const BANK_COLORS = {
 const ACCT_COLORS = {
   "存款帳戶":"#34D399","證券帳戶":"#F87171","基金/其他":"#FBBF24",
 };
+const EXPENSE_PALETTE = ["#F87171","#60A5FA","#34D399","#FBBF24","#A78BFA","#F472B6","#2DD4BF","#FB923C","#818CF8","#4ADE80"];
+const PAYMENT_METHODS = ["現金","行動支付","刷卡","禮券"];
 const CAT_COLORS = {
   "台股":"#F87171","美股":"#60A5FA","現金":"#34D399",
   "外幣":"#FBBF24","基金":"#A78BFA","保險":"#2DD4BF","其他":"#9CA3AF",
@@ -131,7 +133,7 @@ function Toast({toast}) {
 }
 
 // Donut chart with center label
-function DonutChart({data, colors, size=140}) {
+function DonutChart({data, colors, size=140, centerLabel="總資產"}) {
   const total = data.reduce((s,d)=>s+d.value,0);
   const pad = 6;
   const full = size + pad*2;
@@ -149,7 +151,7 @@ function DonutChart({data, colors, size=140}) {
         alignItems:"center",justifyContent:"center",
         flexDirection:"column",pointerEvents:"none"
       }}>
-        <div style={{fontSize:11,color:T.muted,marginBottom:2}}>總資產</div>
+        <div style={{fontSize:11,color:T.muted,marginBottom:2}}>{centerLabel}</div>
         <div style={{fontSize:15,fontWeight:800,color:T.text}}>{fmt(total)}</div>
       </div>
     </div>
@@ -254,6 +256,18 @@ export default function AssetTracker() {
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
   const [newTemplateFrequency,setNewTemplateFrequency] = useState("monthly");
+  const [expenseCategories,setExpenseCategories] = useState([]);
+  const [expenses,setExpenses] = useState([]);
+  const [expensesMonth,setExpensesMonth] = useState(()=>{
+    const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  });
+  const [showExpenseCatManager,setShowExpenseCatManager] = useState(false);
+  const [newExpenseCatName,setNewExpenseCatName] = useState("");
+  const [expenseSaving,setExpenseSaving] = useState(false);
+  const [expenseForm,setExpenseForm] = useState(()=>{
+    const d=new Date();
+    return {date:d.toISOString().slice(0,10),category:"",amount:"",payment_method:"現金",note:""};
+  });
   const [showTemplateManager,setShowTemplateManager] = useState(false);
   const [billSaving,setBillSaving]       = useState(false);
   const [expandedRows,setExpandedRows]   = useState(()=>new Set());
@@ -289,11 +303,13 @@ export default function AssetTracker() {
     const load = async () => {
       setLoading(true);
       try {
-        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData} = await apiGet("list");
+        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expense_categories:ecData, expenses:eData} = await apiGet("list");
         setAssets((aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
         setSnapshots((sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at)));
         setBillTemplates((btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
         setBills(bData||[]);
+        setExpenseCategories((ecData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
+        setExpenses(eData||[]);
       } catch(e) {
         showToast("資產載入失敗："+e.message,"error");
       }
@@ -562,6 +578,73 @@ export default function AssetTracker() {
       await apiPost({action:"deleteBillTemplate", id});
       setBillTemplates(p=>p.filter(t=>t.id!==id));
       showToast("已刪除範本");
+    } catch(e) { showToast("刪除失敗："+e.message,"error"); }
+  };
+
+  // ── 記帳本功能 ────────────────────────────────────────────────────
+  const monthExpenses = useMemo(()=>
+    expenses.filter(e=>e.date&&e.date.slice(0,7)===expensesMonth).sort((a,b)=>b.date.localeCompare(a.date))
+  ,[expenses,expensesMonth]);
+  const expensesMonthLabel = useMemo(()=>{
+    const [y,m]=expensesMonth.split("-");
+    return `${y}年${parseInt(m,10)}月`;
+  },[expensesMonth]);
+  const shiftExpensesMonth = (delta)=>{
+    const [y,m]=expensesMonth.split("-").map(Number);
+    const d = new Date(y, m-1+delta, 1);
+    setExpensesMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+  };
+  const monthExpenseTotal = useMemo(()=>monthExpenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0),[monthExpenses]);
+  const expenseCatBreakdown = useMemo(()=>{
+    const m={};
+    monthExpenses.forEach(e=>{ m[e.category]=(m[e.category]||0)+(parseFloat(e.amount)||0); });
+    return Object.entries(m).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);
+  },[monthExpenses]);
+  const expensesByDate = useMemo(()=>{
+    const groups={};
+    monthExpenses.forEach(e=>{ (groups[e.date]=groups[e.date]||[]).push(e); });
+    return Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0]));
+  },[monthExpenses]);
+
+  const addExpenseCategory = async () => {
+    const name = newExpenseCatName.trim();
+    if (!name) return;
+    try {
+      const result = await apiPost({action:"addExpenseCategory", payload:{name,sort_order:expenseCategories.length,active:true}});
+      setExpenseCategories(p=>[...p,result]);
+      setNewExpenseCatName("");
+    } catch(e) { showToast("新增失敗："+e.message,"error"); }
+  };
+
+  const deleteExpenseCategory = async (id) => {
+    try {
+      await apiPost({action:"deleteExpenseCategory", id});
+      setExpenseCategories(p=>p.filter(c=>c.id!==id));
+      showToast("已刪除分類");
+    } catch(e) { showToast("刪除失敗："+e.message,"error"); }
+  };
+
+  const addExpense = async () => {
+    const amt = parseFloat(expenseForm.amount);
+    if (!expenseForm.category || !amt) { showToast("請選分類並輸入金額","error"); return; }
+    setExpenseSaving(true);
+    try {
+      const result = await apiPost({action:"addExpense", payload:{
+        date:expenseForm.date, category:expenseForm.category, amount:amt,
+        payment_method:expenseForm.payment_method, note:expenseForm.note||"",
+      }});
+      setExpenses(p=>[...p,result]);
+      setExpenseForm(f=>({...f,amount:"",note:""}));
+      showToast("已記一筆");
+    } catch(e) { showToast("新增失敗："+e.message,"error"); }
+    setExpenseSaving(false);
+  };
+
+  const deleteExpense = async (id) => {
+    try {
+      await apiPost({action:"deleteExpense", id});
+      setExpenses(p=>p.filter(e=>e.id!==id));
+      showToast("已刪除");
     } catch(e) { showToast("刪除失敗："+e.message,"error"); }
   };
 
@@ -1020,6 +1103,174 @@ export default function AssetTracker() {
     );
   }
 
+  // ── EXPENSES (記帳本) ────────────────────────────────────────────────────
+  if (page==="expenses") {
+    return (
+      <div style={pageStyle}>
+        {toast&&<Toast toast={toast}/>}
+        <div style={{
+          background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
+          padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
+          display:"flex",alignItems:"center",justifyContent:"space-between"
+        }}>
+          <div>
+            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>個人記帳本</div>
+            <div style={{fontSize:20,fontWeight:800}}>📒 記帳</div>
+          </div>
+          <button onClick={()=>setPage("main")} style={{
+            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
+          }}>← 返回</button>
+        </div>
+
+        <div style={{padding:"20px 16px 40px"}}>
+          {/* 月份切換 */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:16}}>
+            <button onClick={()=>shiftExpensesMonth(-1)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,width:36,height:36,color:T.text,cursor:"pointer",fontSize:16}}>‹</button>
+            <div style={{fontSize:16,fontWeight:800,minWidth:100,textAlign:"center"}}>{expensesMonthLabel}</div>
+            <button onClick={()=>shiftExpensesMonth(1)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,width:36,height:36,color:T.text,cursor:"pointer",fontSize:16}}>›</button>
+          </div>
+
+          {/* 甜甜圈圖 + 分類佔比 */}
+          {expenseCatBreakdown.length>0&&(
+            <div style={{
+              background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,
+              padding:16,marginBottom:16,display:"flex",gap:16,alignItems:"center"
+            }}>
+              <DonutChart data={expenseCatBreakdown} colors={EXPENSE_PALETTE} size={110} centerLabel="本月支出"/>
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:6,minWidth:0}}>
+                {expenseCatBreakdown.slice(0,5).map((c,i)=>(
+                  <div key={c.name} style={{display:"flex",alignItems:"center",gap:6,fontSize:12}}>
+                    <div style={{width:8,height:8,borderRadius:4,background:EXPENSE_PALETTE[i%EXPENSE_PALETTE.length],flexShrink:0}}/>
+                    <div style={{flex:1,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+                    <div style={{color:T.muted,flexShrink:0}}>{fmt(c.value)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {expenseCatBreakdown.length===0&&(
+            <div style={{textAlign:"center",color:T.muted,padding:"20px 0",fontSize:13}}>本月尚無支出紀錄</div>
+          )}
+
+          {/* 快速新增 */}
+          <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              <div>
+                <div style={labelSt}>日期</div>
+                <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm(f=>({...f,date:e.target.value}))} style={inputSt}/>
+              </div>
+              <div>
+                <div style={labelSt}>分類</div>
+                <select value={expenseForm.category} onChange={e=>setExpenseForm(f=>({...f,category:e.target.value}))} style={inputSt}>
+                  <option value="">選擇分類</option>
+                  {expenseCategories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              <div>
+                <div style={labelSt}>金額</div>
+                <input type="number" step="any" placeholder="0" value={expenseForm.amount} onChange={e=>setExpenseForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
+              </div>
+              <div>
+                <div style={labelSt}>支付方式</div>
+                <select value={expenseForm.payment_method} onChange={e=>setExpenseForm(f=>({...f,payment_method:e.target.value}))} style={inputSt}>
+                  {PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{marginBottom:10}}>
+              <div style={labelSt}>備註（選填）</div>
+              <input value={expenseForm.note} onChange={e=>setExpenseForm(f=>({...f,note:e.target.value}))} placeholder="例如：跟朋友吃飯" style={inputSt}/>
+            </div>
+            <button onClick={addExpense} disabled={expenseSaving} style={{
+              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:10,
+              padding:"10px 0",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              opacity:expenseSaving?0.6:1
+            }}>{expenseSaving?"記錄中...":"＋ 記一筆"}</button>
+          </div>
+
+          {/* 明細列表，依日期分組 */}
+          {expensesByDate.length>0&&(
+            <div style={{marginBottom:24}}>
+              {expensesByDate.map(([date,list])=>{
+                const dayTotal = list.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+                return (
+                  <div key={date} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",padding:"0 4px 6px",fontSize:12,color:T.muted}}>
+                      <span>{date}</span>
+                      <span>{fmt(dayTotal)}</span>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {list.map(e=>(
+                        <div key={e.id} style={{
+                          background:T.surface,borderRadius:10,border:`1px solid ${T.border}`,
+                          padding:"10px 12px",display:"flex",alignItems:"center",gap:10
+                        }}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:13,fontWeight:700,color:T.text}}>{e.category}</div>
+                            <div style={{fontSize:11,color:T.muted}}>
+                              {e.payment_method}{e.note?`・${e.note}`:""}
+                            </div>
+                          </div>
+                          <div style={{fontSize:14,fontWeight:700,color:T.text,flexShrink:0}}>{fmt(parseFloat(e.amount)||0)}</div>
+                          <button onClick={()=>deleteExpense(e.id)} style={{
+                            background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:15,padding:"0 2px",flexShrink:0
+                          }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 分類管理 */}
+          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:16}}>
+            <button onClick={()=>setShowExpenseCatManager(v=>!v)} style={{
+              background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",
+              fontFamily:"inherit",padding:0,marginBottom:showExpenseCatManager?12:0
+            }}>{showExpenseCatManager?"▾":"▸"} 管理消費分類（{expenseCategories.length}）</button>
+
+            {showExpenseCatManager&&(
+              <div>
+                <div style={{display:"flex",gap:8,marginBottom:12}}>
+                  <input
+                    value={newExpenseCatName} onChange={e=>setNewExpenseCatName(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")addExpenseCategory();}}
+                    placeholder="例如：餐飲、交通、娛樂"
+                    style={{...inputSt,flex:1}}
+                  />
+                  <button onClick={addExpenseCategory} style={{
+                    background:T.accent,color:"#fff",border:"none",borderRadius:8,
+                    padding:"8px 16px",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
+                  }}>新增</button>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {expenseCategories.map(c=>(
+                    <div key={c.id} style={{
+                      display:"flex",alignItems:"center",justifyContent:"space-between",
+                      background:T.card,borderRadius:8,padding:"8px 12px",fontSize:13
+                    }}>
+                      <span>{c.name}</span>
+                      <button onClick={()=>deleteExpenseCategory(c.id)} style={{
+                        background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:13
+                      }}>刪除</button>
+                    </div>
+                  ))}
+                  {expenseCategories.length===0&&<div style={{fontSize:12,color:T.muted}}>還沒有分類，新增一個開始吧（例如：餐飲、交通、娛樂）</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── MAIN ──────────────────────────────────────────────────────────────────
   return (
     <div style={pageStyle}>
@@ -1052,6 +1303,10 @@ export default function AssetTracker() {
               background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
               padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
             }}>🧾 帳單</button>
+            <button onClick={()=>setPage("expenses")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
+            }}>📒 記帳</button>
             <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
               background:T.accent,border:"none",borderRadius:10,
               padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
