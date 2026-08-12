@@ -7,6 +7,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 let SHEETS_API_URL = (typeof localStorage!=="undefined" && localStorage.getItem("sheets_api_url")) || "";
 let SHEETS_API_TOKEN = (typeof localStorage!=="undefined" && localStorage.getItem("sheets_api_token")) || "";
 
+const DATA_CACHE_KEY = "asset_tracker_data_cache_v1";
+
 function setSheetsConfig(url, token) {
   SHEETS_API_URL = (url||"").trim();
   SHEETS_API_TOKEN = (token||"").trim();
@@ -17,6 +19,7 @@ function clearSheetsConfig() {
   SHEETS_API_URL = ""; SHEETS_API_TOKEN = "";
   localStorage.removeItem("sheets_api_url");
   localStorage.removeItem("sheets_api_token");
+  localStorage.removeItem(DATA_CACHE_KEY);
 }
 
 async function apiGet(action, params={}) {
@@ -301,27 +304,74 @@ export default function AssetTracker() {
 
   useEffect(()=>{
     if (!configured) { setLoading(false); return; }
-    const load = async () => {
-      setLoading(true);
-      try {
-        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expense_categories:ecData, expenses:eData} = await apiGet("list");
-        setAssets((aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
-        setSnapshots((sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at)));
-        setBillTemplates((btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
-        setBills(bData||[]);
-        setExpenseCategories((ecData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)));
-        setExpenses(eData||[]);
-      } catch(e) {
-        showToast("資產載入失敗："+e.message,"error");
+
+    // 先讀本地快取，能立即顯示上次的資料，不用空等網路
+    let hasCache = false;
+    try {
+      const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY)||"null");
+      if (cached) {
+        hasCache = true;
+        setAssets(cached.assets||[]);
+        setSnapshots(cached.snapshots||[]);
+        setBillTemplates(cached.billTemplates||[]);
+        setBills(cached.bills||[]);
+        setExpenseCategories(cached.expenseCategories||[]);
+        setExpenses(cached.expenses||[]);
+        setFxRates(cached.fxRates||{});
+        setFxUpdated(cached.fxUpdated?new Date(cached.fxUpdated):null);
+        setLoading(false); // 有快取就先讓畫面出現，背景再偷偷更新
       }
+    } catch(e) { /* 快取壞掉就當作沒有，走正常流程 */ }
+
+    const load = async () => {
+      if (!hasCache) setLoading(true);
+
+      // 資產資料跟匯率互不相關，平行抓取，不要一個等完才抓下一個
+      const [listResult, fxResult] = await Promise.allSettled([
+        apiGet("list"),
+        fetch(FX_API).then(r=>r.json()),
+      ]);
+
+      let newAssets,newSnapshots,newBillTemplates,newBills,newExpenseCategories,newExpenses;
+      if (listResult.status==="fulfilled") {
+        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expense_categories:ecData, expenses:eData} = listResult.value;
+        newAssets = (aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+        newSnapshots = (sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at));
+        newBillTemplates = (btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+        newBills = bData||[];
+        newExpenseCategories = (ecData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+        newExpenses = eData||[];
+        setAssets(newAssets); setSnapshots(newSnapshots); setBillTemplates(newBillTemplates);
+        setBills(newBills); setExpenseCategories(newExpenseCategories); setExpenses(newExpenses);
+      } else if (!hasCache) {
+        showToast("資產載入失敗："+listResult.reason.message,"error");
+      }
+
+      let newFxRates,newFxUpdated;
+      if (fxResult.status==="fulfilled") {
+        newFxRates={};
+        Object.entries(fxResult.value.rates).forEach(([k,v])=>{newFxRates[k]=1/v;});
+        newFxUpdated=new Date();
+        setFxRates(newFxRates); setFxUpdated(newFxUpdated);
+      } else if (!hasCache) {
+        showToast("匯率載入失敗","error");
+      }
+
+      // 把這次成功抓到的部分寫回快取（失敗的部分沿用舊快取，避免整份被清空）
       try {
-        const res = await fetch(FX_API);
-        const json = await res.json();
-        const rates={};
-        Object.entries(json.rates).forEach(([k,v])=>{rates[k]=1/v;});
-        setFxRates(rates);
-        setFxUpdated(new Date());
-      } catch(e) { showToast("匯率載入失敗","error"); }
+        const prev = JSON.parse(localStorage.getItem(DATA_CACHE_KEY)||"null") || {};
+        localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
+          assets: newAssets ?? prev.assets ?? [],
+          snapshots: newSnapshots ?? prev.snapshots ?? [],
+          billTemplates: newBillTemplates ?? prev.billTemplates ?? [],
+          bills: newBills ?? prev.bills ?? [],
+          expenseCategories: newExpenseCategories ?? prev.expenseCategories ?? [],
+          expenses: newExpenses ?? prev.expenses ?? [],
+          fxRates: newFxRates ?? prev.fxRates ?? {},
+          fxUpdated: newFxUpdated ? newFxUpdated.toISOString() : (prev.fxUpdated ?? null),
+        }));
+      } catch(e) { /* 存不了快取不影響功能，忽略即可 */ }
+
       setLoading(false);
     };
     load();
