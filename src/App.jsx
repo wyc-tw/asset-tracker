@@ -2,23 +2,21 @@ import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ── Google 試算表後端設定 ──────────────────────────────────────
-// 網址跟密碼不寫在程式碼裡，改成執行時讓使用者輸入，存在瀏覽器的 localStorage
+// 網址不寫在程式碼裡，改成執行時讓使用者輸入，存在瀏覽器的 localStorage
 // （只留在使用者自己的裝置上，不會出現在原始碼或打包後的檔案裡）
+// 安全性靠這組網址本身的隨機性保護（Apps Script 網址包含一長串無法猜測的 ID），
+// 沒有另外用密碼驗證，所以請不要把這組網址分享給不信任的人。
 let SHEETS_API_URL = (typeof localStorage!=="undefined" && localStorage.getItem("sheets_api_url")) || "";
-let SHEETS_API_TOKEN = (typeof localStorage!=="undefined" && localStorage.getItem("sheets_api_token")) || "";
 
 const DATA_CACHE_KEY = "asset_tracker_data_cache_v1";
 
-function setSheetsConfig(url, token) {
+function setSheetsConfig(url) {
   SHEETS_API_URL = (url||"").trim();
-  SHEETS_API_TOKEN = (token||"").trim();
   localStorage.setItem("sheets_api_url", SHEETS_API_URL);
-  localStorage.setItem("sheets_api_token", SHEETS_API_TOKEN);
 }
 function clearSheetsConfig() {
-  SHEETS_API_URL = ""; SHEETS_API_TOKEN = "";
+  SHEETS_API_URL = "";
   localStorage.removeItem("sheets_api_url");
-  localStorage.removeItem("sheets_api_token");
   localStorage.removeItem(DATA_CACHE_KEY);
 }
 
@@ -34,7 +32,7 @@ async function apiPost(body) {
     method: "POST",
     // 用 text/plain 避免瀏覽器發送 CORS 預檢請求（Apps Script 不會回應 OPTIONS）
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ ...body, token: SHEETS_API_TOKEN }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
@@ -164,8 +162,7 @@ function DonutChart({data, colors, size=140, centerLabel="總資產"}) {
 
 function SetupScreen({onSave}) {
   const [url,setUrl] = useState(SHEETS_API_URL||"");
-  const [token,setToken] = useState(SHEETS_API_TOKEN||"");
-  const canSave = url.trim() && token.trim();
+  const canSave = url.trim();
   return (
     <div style={{
       minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",
@@ -174,19 +171,15 @@ function SetupScreen({onSave}) {
       <div style={{width:"100%",maxWidth:420,background:T.surface,borderRadius:16,padding:"28px 24px",border:`1px solid ${T.border}`}}>
         <h2 style={{margin:"0 0 8px",fontSize:18,fontWeight:800,color:T.text}}>連接你的試算表</h2>
         <p style={{margin:"0 0 20px",fontSize:12,color:T.muted,lineHeight:1.7}}>
-          請先到你的 Google 試算表 → 擴充功能 → Apps Script，貼上提供給你的程式碼，部署為「網頁應用程式」（存取權限選「任何人」），把取得的網址跟你設定的密碼填在下面。
+          請先到你的 Google 試算表 → 擴充功能 → Apps Script，貼上提供給你的程式碼，部署為「網頁應用程式」（存取權限選「任何人」），把取得的網址填在下面。
         </p>
-        <div style={{marginBottom:14}}>
+        <div style={{marginBottom:20}}>
           <div style={labelSt}>Apps Script 網址</div>
           <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" style={inputSt}/>
         </div>
-        <div style={{marginBottom:20}}>
-          <div style={labelSt}>密碼（跟 Code.gs 裡的 TOKEN 一樣）</div>
-          <input value={token} onChange={e=>setToken(e.target.value)} placeholder="請改成你自己的密碼" style={inputSt}/>
-        </div>
         <button
           disabled={!canSave}
-          onClick={()=>onSave(url.trim(),token.trim())}
+          onClick={()=>onSave(url.trim())}
           style={{
             width:"100%",background:canSave?T.accent:T.card,color:canSave?"#fff":T.muted,
             border:"none",borderRadius:10,padding:"12px 0",fontSize:14,fontWeight:700,
@@ -194,7 +187,7 @@ function SetupScreen({onSave}) {
           }}
         >儲存並連接</button>
         <p style={{margin:"14px 0 0",fontSize:11,color:T.muted,lineHeight:1.6}}>
-          這兩個資訊只會存在你目前這個瀏覽器裡，不會出現在原始碼或其他裝置上；換裝置或清除瀏覽器資料後需要重新輸入一次。
+          這組網址只會存在你目前這個瀏覽器裡，不會出現在原始碼或其他裝置上；換裝置或清除瀏覽器資料後需要重新輸入一次。網址本身包含一長串無法猜測的 ID，請不要分享給不信任的人。
         </p>
       </div>
     </div>
@@ -249,7 +242,7 @@ export default function AssetTracker() {
   const [snapshotting,setSnapshotting]   = useState(false);
   const [snapshotNote,setSnapshotNote]     = useState("");
   const [showSnapshotModal,setShowSnapshotModal] = useState(false);
-  const [configured,setConfigured] = useState(()=>!!(SHEETS_API_URL && SHEETS_API_TOKEN));
+  const [configured,setConfigured] = useState(()=>!!SHEETS_API_URL);
   const [page,setPage]                   = useState("main");
   const [billTemplates,setBillTemplates] = useState([]);
   const [bills,setBills]                 = useState([]);
@@ -715,7 +708,7 @@ export default function AssetTracker() {
 
 
   if (!configured) return (
-    <SetupScreen onSave={(url,token)=>{ setSheetsConfig(url,token); setConfigured(true); }} />
+    <SetupScreen onSave={(url)=>{ setSheetsConfig(url); setConfigured(true); }} />
   );
 
   if (loading) return (
