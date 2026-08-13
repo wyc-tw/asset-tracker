@@ -262,12 +262,16 @@ export default function AssetTracker() {
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
   });
   const [expenseSaving,setExpenseSaving] = useState(false);
+  const [editingExpenseId,setEditingExpenseId] = useState(null);
+  const [editExpenseForm,setEditExpenseForm]   = useState(null);
   const [expenseForm,setExpenseForm] = useState(()=>{
     const d=new Date();
     return {date:d.toISOString().slice(0,10),category:"",amount:"",payment_method:"現金",note:""};
   });
   const [showTemplateManager,setShowTemplateManager] = useState(false);
   const [billSaving,setBillSaving]       = useState(false);
+  const [editingBillId,setEditingBillId] = useState(null);
+  const [editBillForm,setEditBillForm]   = useState(null);
   const [expandedRows,setExpandedRows]   = useState(()=>new Set());
   const toggleExpandRow = (key)=>{
     setExpandedRows(prev=>{
@@ -592,6 +596,25 @@ export default function AssetTracker() {
     } catch(e) { showToast("更新失敗："+e.message,"error"); }
   };
 
+  const startEditBill = (b) => {
+    setEditingBillId(b.id);
+    setEditBillForm({name:b.name||"", amount:b.amount||"", due_day:b.due_day||"", note:b.note||""});
+  };
+  const saveEditBill = async (id) => {
+    const payload = {
+      name: editBillForm.name.trim(),
+      amount: parseFloat(editBillForm.amount)||0,
+      due_day: editBillForm.due_day?parseInt(editBillForm.due_day,10):"",
+      note: editBillForm.note||"",
+    };
+    setBills(p=>p.map(b=>b.id===id?{...b,...payload}:b));
+    setEditingBillId(null); setEditBillForm(null);
+    try {
+      await apiPost({action:"updateBill", id, payload});
+      showToast("已更新");
+    } catch(e) { showToast("更新失敗："+e.message,"error"); }
+  };
+
   const deleteBill = async (id) => {
     try {
       await apiPost({action:"deleteBill", id});
@@ -670,6 +693,25 @@ export default function AssetTracker() {
       setExpenses(p=>p.filter(e=>e.id!==id));
       showToast("已刪除");
     } catch(e) { showToast("刪除失敗："+e.message,"error"); }
+  };
+
+  const startEditExpense = (e) => {
+    setEditingExpenseId(e.id);
+    setEditExpenseForm({date:e.date||"", category:e.category||"", amount:e.amount||"", payment_method:e.payment_method||"現金", note:e.note||""});
+  };
+  const saveEditExpense = async (id) => {
+    const amt = parseFloat(editExpenseForm.amount);
+    if (!editExpenseForm.category || !amt) { showToast("請選分類並輸入金額","error"); return; }
+    const payload = {
+      date: editExpenseForm.date, category: editExpenseForm.category, amount: amt,
+      payment_method: editExpenseForm.payment_method, note: editExpenseForm.note||"",
+    };
+    setExpenses(p=>p.map(e=>e.id===id?{...e,...payload}:e));
+    setEditingExpenseId(null); setEditExpenseForm(null);
+    try {
+      await apiPost({action:"updateExpense", id, payload});
+      showToast("已更新");
+    } catch(e) { showToast("更新失敗："+e.message,"error"); }
   };
 
 
@@ -1013,7 +1055,43 @@ export default function AssetTracker() {
             </div>
           ) : (
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
-              {monthBills.map(b=>(
+              {monthBills.map(b=>{
+                if (editingBillId===b.id) return (
+                  <div key={b.id} style={{
+                    background:T.surface,borderRadius:12,border:`1px solid ${T.accent}40`,
+                    padding:"12px 14px",display:"flex",flexDirection:"column",gap:8
+                  }}>
+                    <div>
+                      <div style={labelSt}>名稱</div>
+                      <input value={editBillForm.name} onChange={e=>setEditBillForm(f=>({...f,name:e.target.value}))} style={inputSt}/>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div>
+                        <div style={labelSt}>金額</div>
+                        <input type="number" step="any" value={editBillForm.amount} onChange={e=>setEditBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
+                      </div>
+                      <div>
+                        <div style={labelSt}>到期日（幾號，選填）</div>
+                        <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={inputSt}/>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={labelSt}>備註（選填）</div>
+                      <input value={editBillForm.note} onChange={e=>setEditBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
+                    </div>
+                    <div style={{display:"flex",gap:8,marginTop:4}}>
+                      <button onClick={()=>saveEditBill(b.id)} style={{
+                        flex:1,background:"#10B981",color:"#fff",border:"none",borderRadius:8,
+                        padding:"9px 0",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
+                      }}>✓ 儲存</button>
+                      <button onClick={()=>{setEditingBillId(null);setEditBillForm(null);}} style={{
+                        background:T.card,color:T.muted,border:`1px solid ${T.border}`,borderRadius:8,
+                        padding:"9px 16px",cursor:"pointer",fontFamily:"inherit"
+                      }}>取消</button>
+                    </div>
+                  </div>
+                );
+                return (
                 <div key={b.id} style={{
                   background:T.surface,borderRadius:12,border:`1px solid ${T.border}`,
                   padding:"12px 14px",display:"flex",alignItems:"center",gap:10
@@ -1036,6 +1114,7 @@ export default function AssetTracker() {
                       {b.due_day&&`每月${b.due_day}日`}
                       {b.due_day&&b.paid&&b.paid_date&&"・"}
                       {!b.auto_debit&&b.paid&&b.paid_date&&`已繳・${b.paid_date}`}
+                      {b.note&&`・${b.note}`}
                     </div>
                   </div>
                   <input
@@ -1047,11 +1126,14 @@ export default function AssetTracker() {
                     }}
                     style={{...inputSt,width:90,textAlign:"right",flexShrink:0}}
                   />
+                  <button onClick={()=>startEditBill(b)} style={{
+                    background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0
+                  }}>✎</button>
                   <button onClick={()=>deleteBill(b.id)} style={{
                     background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:16,padding:"0 2px",flexShrink:0
                   }}>✕</button>
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
@@ -1273,7 +1355,53 @@ export default function AssetTracker() {
                       <span>{fmt(dayTotal)}</span>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      {list.map(e=>(
+                      {list.map(e=>{
+                        if (editingExpenseId===e.id) return (
+                          <div key={e.id} style={{
+                            background:T.surface,borderRadius:10,border:`1px solid ${T.accent}40`,
+                            padding:"12px",display:"flex",flexDirection:"column",gap:8
+                          }}>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                              <div>
+                                <div style={labelSt}>日期</div>
+                                <input type="date" value={editExpenseForm.date} onChange={ev=>setEditExpenseForm(f=>({...f,date:ev.target.value}))} style={inputSt}/>
+                              </div>
+                              <div>
+                                <div style={labelSt}>金額（元）</div>
+                                <input type="number" step="any" value={editExpenseForm.amount} onChange={ev=>setEditExpenseForm(f=>({...f,amount:ev.target.value}))} style={inputSt}/>
+                              </div>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                              <div>
+                                <div style={labelSt}>分類</div>
+                                <select value={editExpenseForm.category} onChange={ev=>setEditExpenseForm(f=>({...f,category:ev.target.value}))} style={inputSt}>
+                                  {COMMON_EXPENSE_CATEGORIES.map(c=><option key={c} value={c}>{expenseCatIcon(c)} {c}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <div style={labelSt}>付款方式</div>
+                                <select value={editExpenseForm.payment_method} onChange={ev=>setEditExpenseForm(f=>({...f,payment_method:ev.target.value}))} style={inputSt}>
+                                  {PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <div style={labelSt}>備註（選填）</div>
+                              <input value={editExpenseForm.note} onChange={ev=>setEditExpenseForm(f=>({...f,note:ev.target.value}))} style={inputSt}/>
+                            </div>
+                            <div style={{display:"flex",gap:8,marginTop:4}}>
+                              <button onClick={()=>saveEditExpense(e.id)} style={{
+                                flex:1,background:"#10B981",color:"#fff",border:"none",borderRadius:8,
+                                padding:"9px 0",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
+                              }}>✓ 儲存</button>
+                              <button onClick={()=>{setEditingExpenseId(null);setEditExpenseForm(null);}} style={{
+                                background:T.card,color:T.muted,border:`1px solid ${T.border}`,borderRadius:8,
+                                padding:"9px 16px",cursor:"pointer",fontFamily:"inherit"
+                              }}>取消</button>
+                            </div>
+                          </div>
+                        );
+                        return (
                         <div key={e.id} style={{
                           background:T.surface,borderRadius:10,border:`1px solid ${T.border}`,
                           padding:"10px 12px",display:"flex",alignItems:"center",gap:10
@@ -1285,11 +1413,14 @@ export default function AssetTracker() {
                             </div>
                           </div>
                           <div style={{fontSize:14,fontWeight:700,color:T.text,flexShrink:0}}>{fmt(parseFloat(e.amount)||0)}</div>
+                          <button onClick={()=>startEditExpense(e)} style={{
+                            background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0
+                          }}>✎</button>
                           <button onClick={()=>deleteExpense(e.id)} style={{
                             background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:15,padding:"0 2px",flexShrink:0
                           }}>✕</button>
                         </div>
-                      ))}
+                      );})}
                     </div>
                   </div>
                 );
