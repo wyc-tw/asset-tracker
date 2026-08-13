@@ -689,6 +689,7 @@ export default function AssetTracker() {
     minHeight:"100vh",background:T.bg,
     fontFamily:"'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif",
     color:T.text, padding:"0 0 80px",
+    maxWidth:520, margin:"0 auto", // 桌面版限制內容寬度並置中，避免版面被拉得太寬；手機螢幕本來就窄，不受影響
   };
 
   // ── HISTORY ───────────────────────────────────────────────────────────────
