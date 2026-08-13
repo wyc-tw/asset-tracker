@@ -257,13 +257,10 @@ export default function AssetTracker() {
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
   const [newTemplateFrequency,setNewTemplateFrequency] = useState("monthly");
-  const [expenseCategories,setExpenseCategories] = useState([]);
   const [expenses,setExpenses] = useState([]);
   const [expensesMonth,setExpensesMonth] = useState(()=>{
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
   });
-  const [showExpenseCatManager,setShowExpenseCatManager] = useState(false);
-  const [newExpenseCatName,setNewExpenseCatName] = useState("");
   const [expenseSaving,setExpenseSaving] = useState(false);
   const [expenseForm,setExpenseForm] = useState(()=>{
     const d=new Date();
@@ -312,7 +309,6 @@ export default function AssetTracker() {
         setSnapshots(cached.snapshots||[]);
         setBillTemplates(cached.billTemplates||[]);
         setBills(cached.bills||[]);
-        setExpenseCategories(cached.expenseCategories||[]);
         setExpenses(cached.expenses||[]);
         setFxRates(cached.fxRates||{});
         setFxUpdated(cached.fxUpdated?new Date(cached.fxUpdated):null);
@@ -329,17 +325,16 @@ export default function AssetTracker() {
         fetch(FX_API).then(r=>r.json()),
       ]);
 
-      let newAssets,newSnapshots,newBillTemplates,newBills,newExpenseCategories,newExpenses;
+      let newAssets,newSnapshots,newBillTemplates,newBills,newExpenses;
       if (listResult.status==="fulfilled") {
-        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expense_categories:ecData, expenses:eData} = listResult.value;
+        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expenses:eData} = listResult.value;
         newAssets = (aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
         newSnapshots = (sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at));
         newBillTemplates = (btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
         newBills = bData||[];
-        newExpenseCategories = (ecData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
         newExpenses = eData||[];
         setAssets(newAssets); setSnapshots(newSnapshots); setBillTemplates(newBillTemplates);
-        setBills(newBills); setExpenseCategories(newExpenseCategories); setExpenses(newExpenses);
+        setBills(newBills); setExpenses(newExpenses);
       } else if (!hasCache) {
         showToast("資產載入失敗："+listResult.reason.message,"error");
       }
@@ -362,7 +357,6 @@ export default function AssetTracker() {
           snapshots: newSnapshots ?? prev.snapshots ?? [],
           billTemplates: newBillTemplates ?? prev.billTemplates ?? [],
           bills: newBills ?? prev.bills ?? [],
-          expenseCategories: newExpenseCategories ?? prev.expenseCategories ?? [],
           expenses: newExpenses ?? prev.expenses ?? [],
           fxRates: newFxRates ?? prev.fxRates ?? {},
           fxUpdated: newFxUpdated ? newFxUpdated.toISOString() : (prev.fxUpdated ?? null),
@@ -653,38 +647,6 @@ export default function AssetTracker() {
     monthExpenses.forEach(e=>{ (groups[e.date]=groups[e.date]||[]).push(e); });
     return Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0]));
   },[monthExpenses]);
-
-  const addExpenseCategory = async () => {
-    const name = newExpenseCatName.trim();
-    if (!name) return;
-    try {
-      const result = await apiPost({action:"addExpenseCategory", payload:{name,sort_order:expenseCategories.length,active:true}});
-      setExpenseCategories(p=>[...p,result]);
-      setNewExpenseCatName("");
-    } catch(e) { showToast("新增失敗："+e.message,"error"); }
-  };
-
-  const addCommonExpenseCategories = async () => {
-    const existing = new Set(expenseCategories.map(c=>c.name));
-    const toAdd = COMMON_EXPENSE_CATEGORIES.filter(n=>!existing.has(n));
-    if (!toAdd.length) return;
-    try {
-      const results = await Promise.all(toAdd.map((name,i)=>apiPost({
-        action:"addExpenseCategory",
-        payload:{name,sort_order:expenseCategories.length+i,active:true}
-      })));
-      setExpenseCategories(p=>[...p,...results]);
-      showToast(`已新增 ${results.length} 個常用分類`);
-    } catch(e) { showToast("新增失敗："+e.message,"error"); }
-  };
-
-  const deleteExpenseCategory = async (id) => {
-    try {
-      await apiPost({action:"deleteExpenseCategory", id});
-      setExpenseCategories(p=>p.filter(c=>c.id!==id));
-      showToast("已刪除分類");
-    } catch(e) { showToast("刪除失敗："+e.message,"error"); }
-  };
 
   const addExpense = async () => {
     const amt = parseFloat(expenseForm.amount);
@@ -1228,20 +1190,6 @@ export default function AssetTracker() {
             <div style={{textAlign:"center",color:T.muted,padding:"20px 0",fontSize:13}}>本月尚無支出紀錄</div>
           )}
 
-          {/* 分類是空的時，先提示一鍵新增常用分類 */}
-          {expenseCategories.length===0&&(
-            <div style={{
-              background:T.card,borderRadius:12,padding:14,marginBottom:16,
-              border:`1px dashed ${T.border}`
-            }}>
-              <div style={{fontSize:12,color:T.muted,marginBottom:10}}>還沒有任何消費分類，先一次加幾個常用的：</div>
-              <button onClick={addCommonExpenseCategories} style={{
-                width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:8,
-                padding:"9px 0",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"
-              }}>＋ 一次加入常用分類（{COMMON_EXPENSE_CATEGORIES.join("、")}）</button>
-            </div>
-          )}
-
           {/* 快速新增 */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
             <div style={{marginBottom:14}}>
@@ -1256,11 +1204,11 @@ export default function AssetTracker() {
             <div style={{marginBottom:14}}>
               <div style={labelSt}>分類</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {expenseCategories.map(c=>{
-                  const active = expenseForm.category===c.name;
+                {COMMON_EXPENSE_CATEGORIES.map(name=>{
+                  const active = expenseForm.category===name;
                   return (
-                    <button key={c.id} type="button"
-                      onClick={()=>setExpenseForm(f=>({...f,category:c.name}))}
+                    <button key={name} type="button"
+                      onClick={()=>setExpenseForm(f=>({...f,category:name}))}
                       style={{
                         display:"flex",alignItems:"center",gap:6,
                         background:active?`${T.accent}22`:T.card,
@@ -1269,10 +1217,9 @@ export default function AssetTracker() {
                         borderRadius:20,padding:"8px 14px",fontSize:13,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
-                    ><span>{expenseCatIcon(c.name)}</span>{c.name}</button>
+                    ><span>{expenseCatIcon(name)}</span>{name}</button>
                   );
                 })}
-                {expenseCategories.length===0&&<span style={{fontSize:12,color:T.muted}}>先在下方新增分類</span>}
               </div>
             </div>
 
@@ -1348,53 +1295,6 @@ export default function AssetTracker() {
               })}
             </div>
           )}
-
-          {/* 分類管理 */}
-          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:16}}>
-            <button onClick={()=>setShowExpenseCatManager(v=>!v)} style={{
-              background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",
-              fontFamily:"inherit",padding:0,marginBottom:showExpenseCatManager?12:0
-            }}>{showExpenseCatManager?"▾":"▸"} 管理消費分類（{expenseCategories.length}）</button>
-
-            {showExpenseCatManager&&(
-              <div>
-                <div style={{display:"flex",gap:8,marginBottom:12}}>
-                  <input
-                    value={newExpenseCatName} onChange={e=>setNewExpenseCatName(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter")addExpenseCategory();}}
-                    placeholder="例如：餐飲、交通、娛樂"
-                    style={{...inputSt,flex:1}}
-                  />
-                  <button onClick={addExpenseCategory} style={{
-                    background:T.accent,color:"#fff",border:"none",borderRadius:8,
-                    padding:"8px 16px",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
-                  }}>新增</button>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {expenseCategories.map(c=>(
-                    <div key={c.id} style={{
-                      display:"flex",alignItems:"center",justifyContent:"space-between",
-                      background:T.card,borderRadius:8,padding:"8px 12px",fontSize:13
-                    }}>
-                      <span>{c.name}</span>
-                      <button onClick={()=>deleteExpenseCategory(c.id)} style={{
-                        background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:13
-                      }}>刪除</button>
-                    </div>
-                  ))}
-                  {expenseCategories.length===0&&(
-                    <div>
-                      <div style={{fontSize:12,color:T.muted,marginBottom:10}}>還沒有分類，新增一個開始吧，或：</div>
-                      <button onClick={addCommonExpenseCategories} style={{
-                        background:T.accent,color:"#fff",border:"none",borderRadius:8,
-                        padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit"
-                      }}>＋ 一次加入常用分類</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     );
