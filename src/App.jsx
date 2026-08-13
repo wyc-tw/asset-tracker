@@ -53,8 +53,12 @@ const ACCT_COLORS = {
   "存款帳戶":"#34D399","證券帳戶":"#F87171","基金/其他":"#FBBF24",
 };
 const EXPENSE_PALETTE = ["#F87171","#60A5FA","#34D399","#FBBF24","#A78BFA","#F472B6","#2DD4BF","#FB923C","#818CF8","#4ADE80"];
-const PAYMENT_METHODS = ["現金","行動支付","刷卡","禮券"];
-const COMMON_EXPENSE_CATEGORIES = ["餐飲","交通","娛樂","購物","居家","醫療","教育","治裝","其他"];
+const PAYMENT_METHODS = ["現金","信用卡","行動支付","悠遊卡","禮券"];
+const COMMON_EXPENSE_CATEGORIES = ["餐食","購物","家用","交通","玩樂","帳單","投資","其他"];
+const EXPENSE_CATEGORY_ICONS = {
+  "餐食":"🍽️","購物":"🛍️","家用":"🏠","交通":"🚗","玩樂":"🎉","帳單":"🧾","投資":"📈","其他":"📦",
+};
+const expenseCatIcon = (name)=>EXPENSE_CATEGORY_ICONS[name]||"🏷️";
 const CAT_COLORS = {
   "台股":"#F87171","美股":"#60A5FA","現金":"#34D399",
   "外幣":"#FBBF24","基金":"#A78BFA","保險":"#2DD4BF","其他":"#9CA3AF",
@@ -1240,40 +1244,73 @@ export default function AssetTracker() {
 
           {/* 快速新增 */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-              <div>
-                <div style={labelSt}>日期</div>
-                <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm(f=>({...f,date:e.target.value}))} style={inputSt}/>
-              </div>
-              <div>
-                <div style={labelSt}>分類</div>
-                <select value={expenseForm.category} onChange={e=>setExpenseForm(f=>({...f,category:e.target.value}))} style={inputSt}>
-                  <option value="">選擇分類</option>
-                  {expenseCategories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>日期</div>
+              <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm(f=>({...f,date:e.target.value}))} style={inputSt}/>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>金額（元）</div>
+              <input type="number" step="any" placeholder="0" value={expenseForm.amount} onChange={e=>setExpenseForm(f=>({...f,amount:e.target.value}))} style={{...inputSt,fontSize:16}}/>
+            </div>
+
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>分類</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {expenseCategories.map(c=>{
+                  const active = expenseForm.category===c.name;
+                  return (
+                    <button key={c.id} type="button"
+                      onClick={()=>setExpenseForm(f=>({...f,category:c.name}))}
+                      style={{
+                        display:"flex",alignItems:"center",gap:6,
+                        background:active?`${T.accent}22`:T.card,
+                        border:`1px solid ${active?T.accent:T.border}`,
+                        color:active?T.accent:T.text,
+                        borderRadius:20,padding:"8px 14px",fontSize:13,fontWeight:active?700:500,
+                        cursor:"pointer",fontFamily:"inherit"
+                      }}
+                    ><span>{expenseCatIcon(c.name)}</span>{c.name}</button>
+                  );
+                })}
+                {expenseCategories.length===0&&<span style={{fontSize:12,color:T.muted}}>先在下方新增分類</span>}
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-              <div>
-                <div style={labelSt}>金額</div>
-                <input type="number" step="any" placeholder="0" value={expenseForm.amount} onChange={e=>setExpenseForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
-              </div>
-              <div>
-                <div style={labelSt}>支付方式</div>
-                <select value={expenseForm.payment_method} onChange={e=>setExpenseForm(f=>({...f,payment_method:e.target.value}))} style={inputSt}>
-                  {PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}
-                </select>
+
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>付款方式</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {PAYMENT_METHODS.map(p=>{
+                  const active = expenseForm.payment_method===p;
+                  return (
+                    <button key={p} type="button"
+                      onClick={()=>setExpenseForm(f=>({...f,payment_method:p}))}
+                      style={{
+                        background:active?`${T.accent}22`:T.card,
+                        border:`1px solid ${active?T.accent:T.border}`,
+                        color:active?T.accent:T.text,
+                        borderRadius:20,padding:"8px 14px",fontSize:13,fontWeight:active?700:500,
+                        cursor:"pointer",fontFamily:"inherit"
+                      }}
+                    >{p}</button>
+                  );
+                })}
               </div>
             </div>
-            <div style={{marginBottom:10}}>
+
+            <div style={{marginBottom:14}}>
               <div style={labelSt}>備註（選填）</div>
-              <input value={expenseForm.note} onChange={e=>setExpenseForm(f=>({...f,note:e.target.value}))} placeholder="例如：跟朋友吃飯" style={inputSt}/>
+              <textarea
+                value={expenseForm.note} onChange={e=>setExpenseForm(f=>({...f,note:e.target.value}))}
+                placeholder="例如：五月薪資、家樂福採購..." rows={3}
+                style={{...inputSt,resize:"none",lineHeight:1.6}}
+              />
             </div>
+
             <button onClick={addExpense} disabled={expenseSaving} style={{
-              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:10,
-              padding:"10px 0",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:12,
+              padding:"14px 0",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
               opacity:expenseSaving?0.6:1
-            }}>{expenseSaving?"記錄中...":"＋ 記一筆"}</button>
+            }}>{expenseSaving?"記錄中...":"＋ 新增記錄"}</button>
           </div>
 
           {/* 明細列表，依日期分組 */}
@@ -1294,7 +1331,7 @@ export default function AssetTracker() {
                           padding:"10px 12px",display:"flex",alignItems:"center",gap:10
                         }}>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:13,fontWeight:700,color:T.text}}>{e.category}</div>
+                            <div style={{fontSize:13,fontWeight:700,color:T.text}}>{expenseCatIcon(e.category)} {e.category}</div>
                             <div style={{fontSize:11,color:T.muted}}>
                               {e.payment_method}{e.note?`・${e.note}`:""}
                             </div>
