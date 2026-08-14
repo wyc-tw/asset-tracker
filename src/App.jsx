@@ -198,6 +198,66 @@ function SetupScreen({onSave}) {
   );
 }
 
+function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
+  const [dragX,setDragX] = useState(0);
+  const dragRef = useState(()=>({startX:0,startY:0,dragging:false,locked:null}))[0];
+  const ACTION_W = 56;
+  const maxOffset = -(actions.length*ACTION_W);
+  const isOpen = openId===id;
+  const translateX = dragRef.dragging ? dragX : (isOpen?maxOffset:0);
+
+  const onTouchStart = (e)=>{
+    dragRef.startX = e.touches[0].clientX;
+    dragRef.startY = e.touches[0].clientY;
+    dragRef.dragging = true;
+    dragRef.locked = null;
+    setDragX(isOpen?maxOffset:0);
+  };
+  const onTouchMove = (e)=>{
+    if (!dragRef.dragging) return;
+    const dx = e.touches[0].clientX - dragRef.startX;
+    const dy = e.touches[0].clientY - dragRef.startY;
+    if (dragRef.locked===null && (Math.abs(dx)>6||Math.abs(dy)>6)) {
+      dragRef.locked = Math.abs(dx)>Math.abs(dy) ? "x" : "y";
+    }
+    if (dragRef.locked==="x") {
+      if (e.cancelable) e.preventDefault();
+      const base = isOpen?maxOffset:0;
+      setDragX(Math.max(maxOffset, Math.min(0, base+dx)));
+    }
+  };
+  const onTouchEnd = ()=>{
+    if (dragRef.locked==="x") {
+      setOpenId(dragX < maxOffset/2 ? id : null);
+    }
+    dragRef.dragging = false; dragRef.locked = null;
+  };
+
+  return (
+    <div style={{position:"relative",overflow:"hidden",borderRadius}}>
+      <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex"}}>
+        {actions.map(a=>(
+          <button key={a.key} onClick={()=>{a.onClick();setOpenId(null);}} style={{
+            width:ACTION_W,border:"none",background:a.color,color:"#fff",
+            fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"
+          }}>{a.icon}</button>
+        ))}
+      </div>
+      <div
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onClick={e=>{ if(isOpen){ e.preventDefault(); e.stopPropagation(); setOpenId(null);} }}
+        style={{
+          transform:`translateX(${translateX}px)`,
+          transition:dragRef.dragging?"none":"transform 0.2s ease",
+          position:"relative",background:T.surface,touchAction:"pan-y",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function SnapshotModal({show, dateStr, totalValue, snapshotNote, setSnapshotNote, snapshotting, onConfirm, onCancel}) {
   if (!show) return null;
   return (
@@ -264,6 +324,7 @@ export default function AssetTracker() {
   const [expenseSaving,setExpenseSaving] = useState(false);
   const [editingExpenseId,setEditingExpenseId] = useState(null);
   const [editExpenseForm,setEditExpenseForm]   = useState(null);
+  const [openExpenseSwipeId,setOpenExpenseSwipeId] = useState(null);
   const [expenseForm,setExpenseForm] = useState(()=>{
     const d=new Date();
     return {date:d.toISOString().slice(0,10),category:"",amount:"",payment_method:"現金",note:""};
@@ -272,6 +333,7 @@ export default function AssetTracker() {
   const [billSaving,setBillSaving]       = useState(false);
   const [editingBillId,setEditingBillId] = useState(null);
   const [editBillForm,setEditBillForm]   = useState(null);
+  const [openBillSwipeId,setOpenBillSwipeId] = useState(null);
   const [expandedRows,setExpandedRows]   = useState(()=>new Set());
   const toggleExpandRow = (key)=>{
     setExpandedRows(prev=>{
@@ -1092,47 +1154,48 @@ export default function AssetTracker() {
                   </div>
                 );
                 return (
-                <div key={b.id} style={{
-                  background:T.surface,borderRadius:12,border:`1px solid ${T.border}`,
-                  padding:"12px 14px",display:"flex",alignItems:"center",gap:10
-                }}>
-                  {b.auto_debit ? (
-                    <div style={{
-                      flexShrink:0,fontSize:10,fontWeight:700,color:"#60A5FA",background:"#60A5FA22",
-                      borderRadius:20,padding:"4px 8px",whiteSpace:"nowrap"
-                    }}>🔄 自動</div>
-                  ) : (
-                    <button onClick={()=>updateBillField(b.id,{paid:!b.paid,paid_date: !b.paid? new Date().toISOString().slice(0,10) : ""})} style={{
-                      width:24,height:24,borderRadius:"50%",border:`2px solid ${b.paid?"#10B981":T.border}`,
-                      background:b.paid?"#10B981":"transparent",color:"#fff",cursor:"pointer",
-                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,padding:0
-                    }}>{b.paid?"✓":""}</button>
-                  )}
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:(b.paid&&!b.auto_debit)?T.muted:T.text,textDecoration:(b.paid&&!b.auto_debit)?"line-through":"none"}}>{b.name}</div>
-                    <div style={{fontSize:11,color:T.muted}}>
-                      {b.due_day&&`每月${b.due_day}日`}
-                      {b.due_day&&b.paid&&b.paid_date&&"・"}
-                      {!b.auto_debit&&b.paid&&b.paid_date&&`已繳・${b.paid_date}`}
-                      {b.note&&`・${b.note}`}
+                <SwipeRow key={b.id} id={b.id} openId={openBillSwipeId} setOpenId={setOpenBillSwipeId}
+                  actions={[
+                    {key:"edit",icon:"✎",color:T.accent,onClick:()=>startEditBill(b)},
+                    {key:"delete",icon:"✕",color:"#EF4444",onClick:()=>deleteBill(b.id)},
+                  ]}
+                >
+                  <div style={{
+                    border:`1px solid ${T.border}`,
+                    padding:"12px 14px",display:"flex",alignItems:"center",gap:10
+                  }}>
+                    {b.auto_debit ? (
+                      <div style={{
+                        flexShrink:0,fontSize:10,fontWeight:700,color:"#60A5FA",background:"#60A5FA22",
+                        borderRadius:20,padding:"4px 8px",whiteSpace:"nowrap"
+                      }}>🔄 自動</div>
+                    ) : (
+                      <button onClick={()=>updateBillField(b.id,{paid:!b.paid,paid_date: !b.paid? new Date().toISOString().slice(0,10) : ""})} style={{
+                        width:24,height:24,borderRadius:"50%",border:`2px solid ${b.paid?"#10B981":T.border}`,
+                        background:b.paid?"#10B981":"transparent",color:"#fff",cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,padding:0
+                      }}>{b.paid?"✓":""}</button>
+                    )}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,color:(b.paid&&!b.auto_debit)?T.muted:T.text,textDecoration:(b.paid&&!b.auto_debit)?"line-through":"none"}}>{b.name}</div>
+                      <div style={{fontSize:11,color:T.muted}}>
+                        {b.due_day&&`每月${b.due_day}日`}
+                        {b.due_day&&b.paid&&b.paid_date&&"・"}
+                        {!b.auto_debit&&b.paid&&b.paid_date&&`已繳・${b.paid_date}`}
+                        {b.note&&`・${b.note}`}
+                      </div>
                     </div>
+                    <input
+                      type="number" step="any" placeholder="0"
+                      defaultValue={b.amount||""}
+                      onBlur={e=>{
+                        const v=parseFloat(e.target.value)||0;
+                        if (v!==b.amount) updateBillField(b.id,{amount:v});
+                      }}
+                      style={{...inputSt,width:90,textAlign:"right",flexShrink:0}}
+                    />
                   </div>
-                  <input
-                    type="number" step="any" placeholder="0"
-                    defaultValue={b.amount||""}
-                    onBlur={e=>{
-                      const v=parseFloat(e.target.value)||0;
-                      if (v!==b.amount) updateBillField(b.id,{amount:v});
-                    }}
-                    style={{...inputSt,width:90,textAlign:"right",flexShrink:0}}
-                  />
-                  <button onClick={()=>startEditBill(b)} style={{
-                    background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0
-                  }}>✎</button>
-                  <button onClick={()=>deleteBill(b.id)} style={{
-                    background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:16,padding:"0 2px",flexShrink:0
-                  }}>✕</button>
-                </div>
+                </SwipeRow>
               );})}
             </div>
           )}
@@ -1250,29 +1313,6 @@ export default function AssetTracker() {
             <button onClick={()=>shiftExpensesMonth(1)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,width:36,height:36,color:T.text,cursor:"pointer",fontSize:16}}>›</button>
           </div>
 
-          {/* 甜甜圈圖 + 分類佔比 */}
-          {expenseCatBreakdown.length>0&&(
-            <div style={{
-              background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,
-              padding:16,marginBottom:16,display:"flex",gap:16,alignItems:"center"
-            }}>
-              <DonutChart data={expenseCatBreakdown} colors={EXPENSE_PALETTE} size={110} centerLabel="本月支出"/>
-              <div style={{flex:1,display:"flex",flexDirection:"column",gap:6,minWidth:0}}>
-                {expenseCatBreakdown.slice(0,5).map((c,i)=>(
-                  <div key={c.name} style={{display:"flex",alignItems:"center",gap:6,fontSize:12}}>
-                    <div style={{width:8,height:8,borderRadius:4,background:EXPENSE_PALETTE[i%EXPENSE_PALETTE.length],flexShrink:0}}/>
-                    <div style={{flex:1,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-                    <div style={{color:T.muted,flexShrink:0}}>{fmt(c.value)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {expenseCatBreakdown.length===0&&(
-            <div style={{textAlign:"center",color:T.muted,padding:"20px 0",fontSize:13}}>本月尚無支出紀錄</div>
-          )}
-
           {/* 快速新增 */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
             <div style={{marginBottom:14}}>
@@ -1343,6 +1383,29 @@ export default function AssetTracker() {
             }}>{expenseSaving?"記錄中...":"＋ 新增記錄"}</button>
           </div>
 
+          {/* 甜甜圈圖 + 分類佔比 */}
+          {expenseCatBreakdown.length>0&&(
+            <div style={{
+              background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,
+              padding:16,marginBottom:16,display:"flex",gap:16,alignItems:"center"
+            }}>
+              <DonutChart data={expenseCatBreakdown} colors={EXPENSE_PALETTE} size={110} centerLabel="本月支出"/>
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:6,minWidth:0}}>
+                {expenseCatBreakdown.slice(0,5).map((c,i)=>(
+                  <div key={c.name} style={{display:"flex",alignItems:"center",gap:6,fontSize:12}}>
+                    <div style={{width:8,height:8,borderRadius:4,background:EXPENSE_PALETTE[i%EXPENSE_PALETTE.length],flexShrink:0}}/>
+                    <div style={{flex:1,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+                    <div style={{color:T.muted,flexShrink:0}}>{fmt(c.value)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {expenseCatBreakdown.length===0&&(
+            <div style={{textAlign:"center",color:T.muted,padding:"20px 0",fontSize:13}}>本月尚無支出紀錄</div>
+          )}
+
           {/* 明細列表，依日期分組 */}
           {expensesByDate.length>0&&(
             <div style={{marginBottom:24}}>
@@ -1402,24 +1465,26 @@ export default function AssetTracker() {
                           </div>
                         );
                         return (
-                        <div key={e.id} style={{
-                          background:T.surface,borderRadius:10,border:`1px solid ${T.border}`,
-                          padding:"10px 12px",display:"flex",alignItems:"center",gap:10
-                        }}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:13,fontWeight:700,color:T.text}}>{expenseCatIcon(e.category)} {e.category}</div>
-                            <div style={{fontSize:11,color:T.muted}}>
-                              {e.payment_method}{e.note?`・${e.note}`:""}
+                        <SwipeRow key={e.id} id={e.id} openId={openExpenseSwipeId} setOpenId={setOpenExpenseSwipeId}
+                          borderRadius={10}
+                          actions={[
+                            {key:"edit",icon:"✎",color:T.accent,onClick:()=>startEditExpense(e)},
+                            {key:"delete",icon:"✕",color:"#EF4444",onClick:()=>deleteExpense(e.id)},
+                          ]}
+                        >
+                          <div style={{
+                            border:`1px solid ${T.border}`,
+                            padding:"10px 12px",display:"flex",alignItems:"center",gap:10
+                          }}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:13,fontWeight:700,color:T.text}}>{expenseCatIcon(e.category)} {e.category}</div>
+                              <div style={{fontSize:11,color:T.muted}}>
+                                {e.payment_method}{e.note?`・${e.note}`:""}
+                              </div>
                             </div>
+                            <div style={{fontSize:14,fontWeight:700,color:T.text,flexShrink:0}}>{fmt(parseFloat(e.amount)||0)}</div>
                           </div>
-                          <div style={{fontSize:14,fontWeight:700,color:T.text,flexShrink:0}}>{fmt(parseFloat(e.amount)||0)}</div>
-                          <button onClick={()=>startEditExpense(e)} style={{
-                            background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0
-                          }}>✎</button>
-                          <button onClick={()=>deleteExpense(e.id)} style={{
-                            background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:15,padding:"0 2px",flexShrink:0
-                          }}>✕</button>
-                        </div>
+                        </SwipeRow>
                       );})}
                     </div>
                   </div>
