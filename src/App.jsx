@@ -200,7 +200,7 @@ function SetupScreen({onSave}) {
 
 function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
   const [dragX,setDragX] = useState(0);
-  const dragRef = useState(()=>({startX:0,startY:0,dragging:false,locked:null}))[0];
+  const dragRef = useState(()=>({startX:0,startY:0,dragging:false,locked:null,x:0}))[0];
   const ACTION_W = 56;
   const maxOffset = -(actions.length*ACTION_W);
   const isOpen = openId===id;
@@ -211,7 +211,8 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
     dragRef.startY = e.touches[0].clientY;
     dragRef.dragging = true;
     dragRef.locked = null;
-    setDragX(isOpen?maxOffset:0);
+    dragRef.x = isOpen?maxOffset:0;
+    setDragX(dragRef.x);
   };
   const onTouchMove = (e)=>{
     if (!dragRef.dragging) return;
@@ -223,14 +224,48 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
     if (dragRef.locked==="x") {
       if (e.cancelable) e.preventDefault();
       const base = isOpen?maxOffset:0;
-      setDragX(Math.max(maxOffset, Math.min(0, base+dx)));
+      dragRef.x = Math.max(maxOffset, Math.min(0, base+dx));
+      setDragX(dragRef.x);
     }
   };
   const onTouchEnd = ()=>{
     if (dragRef.locked==="x") {
-      setOpenId(dragX < maxOffset/2 ? id : null);
+      setOpenId(dragRef.x < maxOffset/2 ? id : null);
     }
     dragRef.dragging = false; dragRef.locked = null;
+  };
+
+  // 桌面滑鼠拖曳（跟觸控邏輯共用同一套判斷，只是事件來源不同）
+  const onMouseDown = (e)=>{
+    dragRef.startX = e.clientX;
+    dragRef.startY = e.clientY;
+    dragRef.dragging = true;
+    dragRef.locked = null;
+    dragRef.x = isOpen?maxOffset:0;
+    setDragX(dragRef.x);
+
+    const onMouseMove = (ev)=>{
+      const dx = ev.clientX - dragRef.startX;
+      const dy = ev.clientY - dragRef.startY;
+      if (dragRef.locked===null && (Math.abs(dx)>4||Math.abs(dy)>4)) {
+        dragRef.locked = Math.abs(dx)>Math.abs(dy) ? "x" : "y";
+      }
+      if (dragRef.locked==="x") {
+        const base = isOpen?maxOffset:0;
+        dragRef.x = Math.max(maxOffset, Math.min(0, base+dx));
+        setDragX(dragRef.x);
+      }
+    };
+    const onMouseUp = ()=>{
+      if (dragRef.locked==="x") {
+        setOpenId(dragRef.x < maxOffset/2 ? id : null);
+      }
+      dragRef.dragging = false; dragRef.locked = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
   };
 
   return (
@@ -245,11 +280,13 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
       </div>
       <div
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}
         onClick={e=>{ if(isOpen){ e.preventDefault(); e.stopPropagation(); setOpenId(null);} }}
         style={{
           transform:`translateX(${translateX}px)`,
           transition:dragRef.dragging?"none":"transform 0.2s ease",
-          position:"relative",background:T.surface,touchAction:"pan-y",
+          position:"relative",background:T.surface,touchAction:"pan-y",cursor:"grab",
+          userSelect:dragRef.dragging?"none":"auto",
         }}
       >
         {children}
