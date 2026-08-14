@@ -1166,7 +1166,7 @@ export default function AssetTracker() {
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div>
-                        <div style={labelSt}>金額</div>
+                        <div style={labelSt}>金額（元）</div>
                         <input type="number" step="any" value={editBillForm.amount} onChange={e=>setEditBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
                       </div>
                       <div>
@@ -1222,15 +1222,18 @@ export default function AssetTracker() {
                         {b.note&&`・${b.note}`}
                       </div>
                     </div>
-                    <input
-                      type="number" step="any" placeholder="0"
-                      defaultValue={b.amount||""}
-                      onBlur={e=>{
-                        const v=parseFloat(e.target.value)||0;
-                        if (v!==b.amount) updateBillField(b.id,{amount:v});
-                      }}
-                      style={{...inputSt,width:90,textAlign:"right",flexShrink:0}}
-                    />
+                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                      <input
+                        type="number" step="any" placeholder="0"
+                        defaultValue={b.amount||""}
+                        onBlur={e=>{
+                          const v=parseFloat(e.target.value)||0;
+                          if (v!==b.amount) updateBillField(b.id,{amount:v});
+                        }}
+                        style={{...inputSt,width:80,textAlign:"right"}}
+                      />
+                      <span style={{fontSize:13,color:T.muted}}>元</span>
+                    </div>
                   </div>
                 </SwipeRow>
               );})}
