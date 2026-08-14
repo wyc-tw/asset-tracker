@@ -675,6 +675,15 @@ export default function AssetTracker() {
     setBillSaving(false);
   };
 
+  // 進入帳單頁面或切換月份時，如果有缺少的每月固定範本，自動補上，不用手動點按鈕
+  // （後端 addBillDedup 已經做過防重複保護，就算這裡重複觸發也不會產生重複帳單）
+  useEffect(()=>{
+    if (page!=="bills") return;
+    if (!missingTemplatesThisMonth.length) return;
+    if (billSaving) return;
+    generateMonthBills();
+  },[page,billsMonth,missingTemplatesThisMonth,billSaving]);
+
   const addOneBill = async (t) => {
     setBillSaving(true);
     try {
@@ -1138,13 +1147,12 @@ export default function AssetTracker() {
             <span style={{fontSize:15,fontWeight:800,color:T.accent}}>{fmt(annualTotal)}</span>
           </div>
 
-          {/* 缺少的範本 → 產生本月帳單 */}
-          {missingTemplatesThisMonth.length>0&&(
-            <button onClick={generateMonthBills} disabled={billSaving} style={{
-              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:12,
-              padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-              marginBottom:16,opacity:billSaving?0.6:1
-            }}>{billSaving?"產生中...":`＋ 產生本月帳單項目（${missingTemplatesThisMonth.length} 筆待補：${missingTemplatesThisMonth.map(t=>t.name).join("、")}）`}</button>
+          {/* 缺少的範本會自動補上（見上方 useEffect），這裡只顯示進度提示 */}
+          {billSaving&&missingTemplatesThisMonth.length>0&&(
+            <div style={{
+              textAlign:"center",color:T.muted,fontSize:12,
+              padding:"10px",marginBottom:16
+            }}>正在補上本月帳單項目...</div>
           )}
 
           {/* 帳單清單 */}
