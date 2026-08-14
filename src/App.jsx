@@ -676,13 +676,17 @@ export default function AssetTracker() {
   };
 
   // 進入帳單頁面或切換月份時，如果有缺少的每月固定範本，自動補上，不用手動點按鈕
-  // （後端 addBillDedup 已經做過防重複保護，就算這裡重複觸發也不會產生重複帳單）
+  // 用 ref 記錄「這個月已經嘗試過自動產生」，同一個月最多只會自動觸發一次，
+  // 不會因為畫面重新渲染、陣列參照變動而重複打 API（多一層前端防護，不完全依賴後端防重複）
+  const autoGenAttemptedRef = useState(()=>new Set())[0];
   useEffect(()=>{
     if (page!=="bills") return;
     if (!missingTemplatesThisMonth.length) return;
     if (billSaving) return;
+    if (autoGenAttemptedRef.has(billsMonth)) return;
+    autoGenAttemptedRef.add(billsMonth);
     generateMonthBills();
-  },[page,billsMonth,missingTemplatesThisMonth,billSaving]);
+  },[page,billsMonth,missingTemplatesThisMonth.length,billSaving]);
 
   const addOneBill = async (t) => {
     setBillSaving(true);
