@@ -353,7 +353,7 @@ export default function AssetTracker() {
   const [newTemplateName,setNewTemplateName] = useState("");
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
-  const [newTemplateFrequency,setNewTemplateFrequency] = useState("monthly");
+  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:""});
   const [expenses,setExpenses] = useState([]);
   const [expensesMonth,setExpensesMonth] = useState(()=>{
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -648,57 +648,31 @@ export default function AssetTracker() {
     bills.filter(b=>b.month&&b.month.startsWith(billYear+"-")).reduce((s,b)=>s+(parseFloat(b.amount)||0),0)
   ,[bills,billYear]);
 
-  const monthlyTemplates = useMemo(()=>billTemplates.filter(t=>t.active!==false&&(t.frequency||"monthly")==="monthly"),[billTemplates]);
-  const irregularTemplates = useMemo(()=>billTemplates.filter(t=>t.active!==false&&t.frequency==="irregular"),[billTemplates]);
-  const missingTemplatesThisMonth = useMemo(()=>
-    monthlyTemplates.filter(t=>!monthBills.some(b=>b.template_id===t.id))
-  ,[monthlyTemplates,monthBills]);
-  const irregularAvailableThisMonth = useMemo(()=>
-    irregularTemplates.filter(t=>!monthBills.some(b=>b.template_id===t.id))
-  ,[irregularTemplates,monthBills]);
-
-  const generateMonthBills = async () => {
-    if (!missingTemplatesThisMonth.length) return;
-    setBillSaving(true);
-    try {
-      const results = await Promise.all(missingTemplatesThisMonth.map(t=>apiPost({
-        action:"addBill",
-        payload:{
-          template_id:t.id,name:t.name,month:billsMonth,amount:0,
-          paid:!!t.auto_debit,due_day:t.due_day||"",paid_date:"",note:"",
-          auto_debit:!!t.auto_debit,
-        }
-      })));
-      setBills(p=>[...p,...results]);
-      showToast(`已產生 ${results.length} 筆本月帳單`);
-    } catch(e) { showToast("產生失敗："+e.message,"error"); }
-    setBillSaving(false);
-  };
-
-  // 進入帳單頁面或切換月份時，如果有缺少的每月固定範本，自動補上，不用手動點按鈕
-  // 用 ref 記錄「這個月已經嘗試過自動產生」，同一個月最多只會自動觸發一次，
-  // 不會因為畫面重新渲染、陣列參照變動而重複打 API（多一層前端防護，不完全依賴後端防重複）
-  const autoGenAttemptedRef = useState(()=>new Set())[0];
-  useEffect(()=>{
-    if (page!=="bills") return;
-    if (!missingTemplatesThisMonth.length) return;
-    if (billSaving) return;
-    if (autoGenAttemptedRef.has(billsMonth)) return;
-    autoGenAttemptedRef.add(billsMonth);
-    generateMonthBills();
-  },[page,billsMonth,missingTemplatesThisMonth.length,billSaving]);
-
-  const addOneBill = async (t) => {
+  // 手動新增一筆帳單（不會有任何自動觸發，全部由使用者按下「新增」才會產生資料）
+  const addBillEntry = async () => {
+    const name = billForm.name.trim();
+    const amt = parseFloat(billForm.amount)||0;
+    if (!name) { showToast("請輸入帳單名稱","error"); return; }
     setBillSaving(true);
     try {
       const result = await apiPost({action:"addBill", payload:{
-        template_id:t.id,name:t.name,month:billsMonth,amount:0,
-        paid:!!t.auto_debit,due_day:t.due_day||"",paid_date:"",note:"",
-        auto_debit:!!t.auto_debit,
+        template_id: billForm.template_id||"",
+        name, month: billsMonth, amount: amt,
+        paid: !!billForm.auto_debit,
+        due_day: billForm.due_day?parseInt(billForm.due_day,10):"",
+        paid_date: billForm.auto_debit? new Date().toISOString().slice(0,10) : "",
+        note: billForm.note||"",
+        auto_debit: !!billForm.auto_debit,
       }});
       setBills(p=>[...p,result]);
+      setBillForm({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:""});
+      showToast("已新增帳單");
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
     setBillSaving(false);
+  };
+
+  const pickBillTemplate = (t) => {
+    setBillForm(f=>({...f, template_id:t.id, name:t.name, due_day:t.due_day||"", auto_debit:!!t.auto_debit}));
   };
 
   const updateBillField = async (id, payload) => {
@@ -710,13 +684,14 @@ export default function AssetTracker() {
 
   const startEditBill = (b) => {
     setEditingBillId(b.id);
-    setEditBillForm({name:b.name||"", amount:b.amount||"", due_day:b.due_day||"", note:b.note||""});
+    setEditBillForm({name:b.name||"", amount:b.amount||"", due_day:b.due_day||"", auto_debit:!!b.auto_debit, note:b.note||""});
   };
   const saveEditBill = async (id) => {
     const payload = {
       name: editBillForm.name.trim(),
       amount: parseFloat(editBillForm.amount)||0,
       due_day: editBillForm.due_day?parseInt(editBillForm.due_day,10):"",
+      auto_debit: !!editBillForm.auto_debit,
       note: editBillForm.note||"",
     };
     setBills(p=>p.map(b=>b.id===id?{...b,...payload}:b));
@@ -735,6 +710,7 @@ export default function AssetTracker() {
     } catch(e) { showToast("刪除失敗："+e.message,"error"); }
   };
 
+  // 常用帳單名稱（單純的快速選單，新增後很少會再變動，跟「這個月要不要出現」完全無關）
   const addBillTemplate = async () => {
     const name = newTemplateName.trim();
     if (!name) return;
@@ -743,10 +719,9 @@ export default function AssetTracker() {
         name,category:"",note:"",sort_order:billTemplates.length,active:true,
         due_day:newTemplateDueDay?parseInt(newTemplateDueDay,10):"",
         auto_debit:!!newTemplateAutoDebit,
-        frequency:newTemplateFrequency||"monthly",
       }});
       setBillTemplates(p=>[...p,result]);
-      setNewTemplateName(""); setNewTemplateDueDay(""); setNewTemplateAutoDebit(false); setNewTemplateFrequency("monthly");
+      setNewTemplateName(""); setNewTemplateDueDay(""); setNewTemplateAutoDebit(false);
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
   };
 
@@ -754,7 +729,7 @@ export default function AssetTracker() {
     try {
       await apiPost({action:"deleteBillTemplate", id});
       setBillTemplates(p=>p.filter(t=>t.id!==id));
-      showToast("已刪除範本");
+      showToast("已刪除常用名稱");
     } catch(e) { showToast("刪除失敗："+e.message,"error"); }
   };
 
@@ -1151,18 +1126,65 @@ export default function AssetTracker() {
             <span style={{fontSize:15,fontWeight:800,color:T.accent}}>{fmt(annualTotal)}</span>
           </div>
 
-          {/* 缺少的範本會自動補上（見上方 useEffect），這裡只顯示進度提示 */}
-          {billSaving&&missingTemplatesThisMonth.length>0&&(
-            <div style={{
-              textAlign:"center",color:T.muted,fontSize:12,
-              padding:"10px",marginBottom:16
-            }}>正在補上本月帳單項目...</div>
-          )}
+          {/* ＋ 新增帳單（完全手動，不會有任何自動觸發） */}
+          <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
+            {billTemplates.length>0&&(
+              <div style={{marginBottom:14}}>
+                <div style={labelSt}>常用名稱（點選快速帶入）</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {billTemplates.map(t=>{
+                    const active = billForm.template_id===t.id;
+                    return (
+                      <button key={t.id} type="button" onClick={()=>pickBillTemplate(t)} style={{
+                        background:active?`${T.accent}22`:T.card,
+                        border:`1px solid ${active?T.accent:T.border}`,
+                        color:active?T.accent:T.text,
+                        borderRadius:20,padding:"7px 12px",fontSize:12,fontWeight:active?700:500,
+                        cursor:"pointer",fontFamily:"inherit"
+                      }}>{t.auto_debit?"🔄 ":""}{t.name}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>帳單名稱</div>
+              <input
+                value={billForm.name}
+                onChange={e=>setBillForm(f=>({...f,name:e.target.value,template_id:""}))}
+                placeholder="例如：星展信用卡、電話費"
+                style={inputSt}
+              />
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              <div>
+                <div style={labelSt}>金額（元）</div>
+                <input type="number" step="any" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
+              </div>
+              <div>
+                <div style={labelSt}>到期日（幾號，選填）</div>
+                <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={inputSt}/>
+              </div>
+            </div>
+            <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.muted,marginBottom:14,cursor:"pointer"}}>
+              <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
+              自動扣款（不用手動勾已繳）
+            </label>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>備註（選填）</div>
+              <input value={billForm.note} onChange={e=>setBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
+            </div>
+            <button onClick={addBillEntry} disabled={billSaving} style={{
+              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:12,
+              padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              opacity:billSaving?0.6:1
+            }}>{billSaving?"新增中...":"＋ 新增帳單"}</button>
+          </div>
 
           {/* 帳單清單 */}
           {monthBills.length===0 ? (
             <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:13}}>
-              本月尚無帳單項目{billTemplates.length===0&&"，先在下方新增帳單範本吧"}
+              本月尚無帳單項目，用上面的表單新增第一筆吧
             </div>
           ) : (
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
@@ -1186,6 +1208,10 @@ export default function AssetTracker() {
                         <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={inputSt}/>
                       </div>
                     </div>
+                    <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.muted,cursor:"pointer"}}>
+                      <input type="checkbox" checked={editBillForm.auto_debit} onChange={e=>setEditBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
+                      自動扣款
+                    </label>
                     <div>
                       <div style={labelSt}>備註（選填）</div>
                       <input value={editBillForm.note} onChange={e=>setEditBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
@@ -1252,27 +1278,12 @@ export default function AssetTracker() {
             </div>
           )}
 
-          {/* 不定期帳單：需要手動個別新增，不會自動跳出提示 */}
-          {irregularAvailableThisMonth.length>0&&(
-            <div style={{marginBottom:24}}>
-              <div style={{fontSize:12,color:T.muted,marginBottom:8}}>不定期帳單（本月尚未新增）</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {irregularAvailableThisMonth.map(t=>(
-                  <button key={t.id} onClick={()=>addOneBill(t)} disabled={billSaving} style={{
-                    background:T.card,border:`1px dashed ${T.border}`,borderRadius:10,
-                    padding:"8px 14px",fontSize:12,color:T.muted,cursor:"pointer",fontFamily:"inherit"
-                  }}>＋ {t.name}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 範本管理 */}
+          {/* 常用名稱管理：新增後很少變動，收在最下面 */}
           <div style={{borderTop:`1px solid ${T.border}`,paddingTop:16}}>
             <button onClick={()=>setShowTemplateManager(v=>!v)} style={{
               background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",
               fontFamily:"inherit",padding:0,marginBottom:showTemplateManager?12:0
-            }}>{showTemplateManager?"▾":"▸"} 管理帳單範本（{billTemplates.length}）</button>
+            }}>{showTemplateManager?"▾":"▸"} 管理常用名稱（{billTemplates.length}）</button>
 
             {showTemplateManager&&(
               <div>
@@ -1282,31 +1293,22 @@ export default function AssetTracker() {
                     placeholder="例如：信用卡費、保費、電話費"
                     style={{...inputSt,marginBottom:8}}
                   />
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                    <div>
-                      <div style={labelSt}>到期日（選填）</div>
-                      <input
-                        type="number" min="1" max="31" placeholder="例如 5"
-                        value={newTemplateDueDay} onChange={e=>setNewTemplateDueDay(e.target.value)}
-                        style={inputSt}
-                      />
-                    </div>
-                    <div>
-                      <div style={labelSt}>頻率</div>
-                      <select value={newTemplateFrequency} onChange={e=>setNewTemplateFrequency(e.target.value)} style={inputSt}>
-                        <option value="monthly">每月固定</option>
-                        <option value="irregular">不定期</option>
-                      </select>
-                    </div>
+                  <div style={{marginBottom:8}}>
+                    <div style={labelSt}>到期日（選填）</div>
+                    <input
+                      type="number" min="1" max="31" placeholder="例如 5"
+                      value={newTemplateDueDay} onChange={e=>setNewTemplateDueDay(e.target.value)}
+                      style={inputSt}
+                    />
                   </div>
                   <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.muted,marginBottom:10,cursor:"pointer"}}>
                     <input type="checkbox" checked={newTemplateAutoDebit} onChange={e=>setNewTemplateAutoDebit(e.target.checked)}/>
-                    自動扣款（不用手動勾已繳）
+                    通常是自動扣款
                   </label>
                   <button onClick={addBillTemplate} style={{
                     width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:8,
                     padding:"9px 0",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
-                  }}>新增範本</button>
+                  }}>新增常用名稱</button>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {billTemplates.map(t=>(
@@ -1317,8 +1319,7 @@ export default function AssetTracker() {
                       <div>
                         <span>{t.name}</span>
                         <span style={{color:T.muted,fontSize:11,marginLeft:8}}>
-                          {t.frequency==="irregular"?"不定期":"每月"}
-                          {t.due_day?`・每月${t.due_day}日`:""}
+                          {t.due_day?`每月${t.due_day}日`:""}
                           {t.auto_debit?"・自動扣款":""}
                         </span>
                       </div>
@@ -1327,7 +1328,7 @@ export default function AssetTracker() {
                       }}>刪除</button>
                     </div>
                   ))}
-                  {billTemplates.length===0&&<div style={{fontSize:12,color:T.muted}}>還沒有帳單範本，新增一個開始吧</div>}
+                  {billTemplates.length===0&&<div style={{fontSize:12,color:T.muted}}>還沒有常用名稱，新增一個開始吧</div>}
                 </div>
               </div>
             )}
