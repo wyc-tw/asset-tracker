@@ -353,7 +353,7 @@ export default function AssetTracker() {
   const [newTemplateName,setNewTemplateName] = useState("");
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
-  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:""});
+  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:"",month:billsMonth});
   const [expenses,setExpenses] = useState([]);
   const [expensesMonth,setExpensesMonth] = useState(()=>{
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -648,6 +648,11 @@ export default function AssetTracker() {
     bills.filter(b=>b.month&&b.month.startsWith(billYear+"-")).reduce((s,b)=>s+(parseFloat(b.amount)||0),0)
   ,[bills,billYear]);
 
+  // 切換「檢視」的月份時，新增帳單表單的月份預設值也跟著換，減少手動改的次數
+  useEffect(()=>{
+    setBillForm(f=>({...f, month:billsMonth}));
+  },[billsMonth]);
+
   // 手動新增一筆帳單（不會有任何自動觸發，全部由使用者按下「新增」才會產生資料）
   const addBillEntry = async () => {
     const name = billForm.name.trim();
@@ -657,7 +662,7 @@ export default function AssetTracker() {
     try {
       const result = await apiPost({action:"addBill", payload:{
         template_id: billForm.template_id||"",
-        name, month: billsMonth, amount: amt,
+        name, month: billForm.month||billsMonth, amount: amt,
         paid: !!billForm.auto_debit,
         due_day: billForm.due_day?parseInt(billForm.due_day,10):"",
         paid_date: billForm.auto_debit? new Date().toISOString().slice(0,10) : "",
@@ -665,8 +670,9 @@ export default function AssetTracker() {
         auto_debit: !!billForm.auto_debit,
       }});
       setBills(p=>[...p,result]);
-      setBillForm({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:""});
-      showToast("已新增帳單");
+      // 補歷史資料時常常會連續新增好幾筆同一個月，所以月份保留、其他欄位清空
+      setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:"",month:f.month}));
+      showToast(`已新增到 ${billForm.month||billsMonth}`);
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
     setBillSaving(false);
   };
@@ -1100,10 +1106,17 @@ export default function AssetTracker() {
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
-          {/* 月份切換 */}
+          {/* 月份切換：左右箭頭一格一格翻，或直接點月份文字跳到任何月份 */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:16}}>
             <button onClick={()=>shiftMonth(-1)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,width:36,height:36,color:T.text,cursor:"pointer",fontSize:16}}>‹</button>
-            <div style={{fontSize:16,fontWeight:800,minWidth:100,textAlign:"center"}}>{monthLabel}</div>
+            <div style={{position:"relative",minWidth:100,textAlign:"center"}}>
+              <div style={{fontSize:16,fontWeight:800}}>{monthLabel}</div>
+              <input
+                type="month" value={billsMonth}
+                onChange={e=>{ if(e.target.value) setBillsMonth(e.target.value); }}
+                style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",border:"none",width:"100%"}}
+              />
+            </div>
             <button onClick={()=>shiftMonth(1)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,width:36,height:36,color:T.text,cursor:"pointer",fontSize:16}}>›</button>
           </div>
 
@@ -1128,6 +1141,10 @@ export default function AssetTracker() {
 
           {/* ＋ 新增帳單（完全手動，不會有任何自動觸發） */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>要記到哪個月（補舊資料時可以改成其他月份）</div>
+              <input type="month" value={billForm.month} onChange={e=>setBillForm(f=>({...f,month:e.target.value}))} style={inputSt}/>
+            </div>
             {billTemplates.length>0&&(
               <div style={{marginBottom:14}}>
                 <div style={labelSt}>常用名稱（點選快速帶入）</div>
