@@ -1148,7 +1148,7 @@ export default function AssetTracker() {
             {billTemplates.length>0&&(
               <div style={{marginBottom:14}}>
                 <div style={labelSt}>常用名稱（點選快速帶入）</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                   {billTemplates.map(t=>{
                     const active = billForm.template_id===t.id;
                     return (
@@ -1156,8 +1156,9 @@ export default function AssetTracker() {
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:20,padding:"7px 12px",fontSize:12,fontWeight:active?700:500,
-                        cursor:"pointer",fontFamily:"inherit"
+                        borderRadius:20,padding:"7px 8px",fontSize:12,fontWeight:active?700:500,
+                        cursor:"pointer",fontFamily:"inherit",
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
                       }}>{t.auto_debit?"🔄 ":""}{t.name}</button>
                     );
                   })}
@@ -1396,18 +1397,18 @@ export default function AssetTracker() {
 
             <div style={{marginBottom:14}}>
               <div style={labelSt}>分類</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                 {COMMON_EXPENSE_CATEGORIES.map(name=>{
                   const active = expenseForm.category===name;
                   return (
                     <button key={name} type="button"
                       onClick={()=>setExpenseForm(f=>({...f,category:name}))}
                       style={{
-                        display:"flex",alignItems:"center",gap:6,
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:6,
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:20,padding:"8px 14px",fontSize:13,fontWeight:active?700:500,
+                        borderRadius:20,padding:"8px 6px",fontSize:13,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
                     ><span>{expenseCatIcon(name)}</span>{name}</button>
@@ -1418,7 +1419,7 @@ export default function AssetTracker() {
 
             <div style={{marginBottom:14}}>
               <div style={labelSt}>付款方式</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                 {PAYMENT_METHODS.map(p=>{
                   const active = expenseForm.payment_method===p;
                   return (
@@ -1428,7 +1429,7 @@ export default function AssetTracker() {
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:20,padding:"8px 14px",fontSize:13,fontWeight:active?700:500,
+                        borderRadius:20,padding:"8px 6px",fontSize:13,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
                     >{p}</button>
