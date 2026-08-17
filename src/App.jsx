@@ -623,7 +623,7 @@ export default function AssetTracker() {
     ...Object.fromEntries(Object.entries(s.category_breakdown||{}).map(([k,v])=>["cat_"+k,v]))
   })),[snapshots]);
 
-  const isBankOpen  = b=>openBanks[b]!==false;
+  const isBankOpen  = b=>openBanks[b]===true;
   const isAcctOpen  = (b,ac)=>openAccts[b+"__"+ac]!==false;
   const toggleBank  = b=>setOpenBanks(p=>({...p,[b]:p[b]===false?true:false}));
   const toggleAcct  = (b,ac)=>setOpenAccts(p=>({...p,[b+"__"+ac]:p[b+"__"+ac]===false?true:false}));
@@ -1838,7 +1838,7 @@ export default function AssetTracker() {
               {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
               {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
             </div>
-            <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
+            <div style={{fontSize:20,fontWeight:800}}>🗂️ 資產整理</div>
           </div>
           <div style={{flexShrink:0,display:"flex",gap:8}}>
             <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} title="快照" style={{
@@ -2041,13 +2041,16 @@ export default function AssetTracker() {
       <div style={{padding:"20px 20px 32px"}}>
         <div style={{
           background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,
-          padding:18,display:"flex",alignItems:"center",gap:16
+          padding:18,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"
         }}>
+          <div style={{flexShrink:0}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:4}}>總資產</div>
+            <div style={{fontSize:22,fontWeight:900,letterSpacing:-1}}>{fmt(totalValue)}</div>
+          </div>
           <div style={{flexShrink:0}}>
             <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={120}/>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0,flex:1}}>
-            <div style={{fontSize:11,color:T.muted,marginBottom:2}}>資產配置</div>
             {bankBreakdown.slice(0,6).map((b,i)=>{
               const col=Object.values(BANK_COLORS)[i%9];
               return (
