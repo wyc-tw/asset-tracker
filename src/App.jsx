@@ -1846,27 +1846,6 @@ export default function AssetTracker() {
 
         {/* 固定標籤列 */}
         <TagNav currentPage="main" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
-
-        {/* Donut + legend */}
-        <div style={{display:"flex",alignItems:"center",gap:16,marginTop:20}}>
-          <div style={{flexShrink:0}}>
-            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={140}/>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0}}>
-            {bankBreakdown.slice(0,6).map((b,i)=>{
-              const col=Object.values(BANK_COLORS)[i%9];
-              return (
-                <div key={b.name} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:8,height:8,borderRadius:2,background:col,flexShrink:0}}/>
-                  <span style={{fontSize:13,color:T.muted,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.text,minWidth:38,textAlign:"right"}}>{pct(b.value).toFixed(1)}%</span>
-                  <span style={{fontSize:11,color:T.muted,minWidth:46,textAlign:"right"}}>{fmt(b.value)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
       </div>
 
       {/* Owner filter */}
@@ -2044,6 +2023,32 @@ export default function AssetTracker() {
           background:"none",border:"none",color:T.muted,fontSize:10,opacity:0.4,
           cursor:"pointer",fontFamily:"inherit"
         }}>⚙ 重新設定試算表連線</button>
+      </div>
+
+      {/* 資產配置圓餅圖：偶爾看一下整體配置狀況，放在頁面最下方 */}
+      <div style={{padding:"20px 20px 32px"}}>
+        <div style={{
+          background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,
+          padding:18,display:"flex",alignItems:"center",gap:16
+        }}>
+          <div style={{flexShrink:0}}>
+            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={120}/>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0,flex:1}}>
+            <div style={{fontSize:11,color:T.muted,marginBottom:2}}>資產配置</div>
+            {bankBreakdown.slice(0,6).map((b,i)=>{
+              const col=Object.values(BANK_COLORS)[i%9];
+              return (
+                <div key={b.name} style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:8,height:8,borderRadius:2,background:col,flexShrink:0}}/>
+                  <span style={{fontSize:13,color:T.muted,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:T.text,minWidth:38,textAlign:"right"}}>{pct(b.value).toFixed(1)}%</span>
+                  <span style={{fontSize:11,color:T.muted,minWidth:46,textAlign:"right"}}>{fmt(b.value)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* FAB Add */}
