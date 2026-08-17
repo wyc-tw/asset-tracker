@@ -414,6 +414,7 @@ export default function AssetTracker() {
   const [showAdd,setShowAdd]             = useState(false);
   const [addForm,setAddForm]             = useState({bank:"富邦",account:"存款帳戶",category:"現金",name:"",quantity:"",original_value:"",currency:"TWD",owner:"本人"});
   const [ownerFilter,setOwnerFilter]     = useState("全部");
+  const [showLegend,setShowLegend]       = useState(false); // 首頁圓餅圖明細，預設收合，點擊圓餅圖才展開
   const [toast,setToast]                 = useState(null);
   const [chartType,setChartType]         = useState("total");
   const [todos,setTodos]                 = useState([]);
@@ -1831,47 +1832,53 @@ export default function AssetTracker() {
           <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
         </div>
 
-        {/* 橫向導覽列 */}
-        <div style={{display:"flex",gap:8,marginBottom:24}}>
-          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-            flex:1,background:T.accent,border:"none",borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:"#fff",fontWeight:700,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-            opacity:snapshotting?0.6:1
-          }}><span style={{fontSize:18}}>📸</span>{snapshotting?"...":"快照"}</button>
-          <button onClick={()=>setPage("history")} style={{
-            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4
-          }}><span style={{fontSize:18}}>📈</span>歷史</button>
-          <button onClick={()=>setPage("breakdown")} style={{
-            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4
-          }}><span style={{fontSize:18}}>📊</span>分類</button>
-          <button onClick={()=>setPage("bills")} style={{
-            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4
-          }}><span style={{fontSize:18}}>🧾</span>帳單</button>
-          <button onClick={()=>setPage("expenses")} style={{
-            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4
-          }}><span style={{fontSize:18}}>📒</span>記帳</button>
-          <button onClick={()=>setPage("todos")} style={{
-            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
-            display:"flex",flexDirection:"column",alignItems:"center",gap:4
-          }}><span style={{fontSize:18}}>✅</span>待辦</button>
+        {/* 導覽列（2欄格子）＋ 甜甜圈圖 */}
+        <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:showLegend?16:24}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,flex:1,minWidth:0}}>
+            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
+              background:T.accent,border:"none",borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
+              display:"flex",alignItems:"center",gap:6,opacity:snapshotting?0.6:1
+            }}><span style={{fontSize:15}}>📸</span>{snapshotting?"...":"快照"}</button>
+            <button onClick={()=>setPage("history")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              display:"flex",alignItems:"center",gap:6
+            }}><span style={{fontSize:15}}>📈</span>歷史</button>
+            <button onClick={()=>setPage("breakdown")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              display:"flex",alignItems:"center",gap:6
+            }}><span style={{fontSize:15}}>📊</span>分類</button>
+            <button onClick={()=>setPage("bills")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              display:"flex",alignItems:"center",gap:6
+            }}><span style={{fontSize:15}}>🧾</span>帳單</button>
+            <button onClick={()=>setPage("expenses")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              display:"flex",alignItems:"center",gap:6
+            }}><span style={{fontSize:15}}>📒</span>記帳</button>
+            <button onClick={()=>setPage("todos")} style={{
+              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              display:"flex",alignItems:"center",gap:6
+            }}><span style={{fontSize:15}}>✅</span>待辦</button>
+          </div>
+
+          <div
+            onClick={()=>setShowLegend(v=>!v)}
+            style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}
+          >
+            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={120}/>
+            <div style={{fontSize:10,color:T.muted}}>{showLegend?"▴ 收合明細":"▾ 查看明細"}</div>
+          </div>
         </div>
 
-        {/* Donut + legend */}
-        <div style={{display:"flex",alignItems:"center",gap:16,justifyContent:"center"}}>
-          <div style={{flexShrink:0}}>
-            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={140}/>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0}}>
+        {/* 銀行佔比明細：預設收合，點擊圓餅圖展開 */}
+        {showLegend&&(
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>
             {bankBreakdown.slice(0,6).map((b,i)=>{
               const col=Object.values(BANK_COLORS)[i%9];
               return (
@@ -1884,8 +1891,7 @@ export default function AssetTracker() {
               );
             })}
           </div>
-        </div>
-
+        )}
 
       </div>
 
