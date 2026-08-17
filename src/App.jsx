@@ -361,29 +361,25 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
   );
 }
 
-// 固定顯示在所有頁面的橫向標籤列：快照是動作（永遠是紫色），其餘 5 個是頁面切換
-// 點擊「目前已高亮」的那個標籤 = 回首頁；點擊其他標籤 = 直接切換到該頁
+// 固定顯示在所有頁面的橫向標籤列，共 4 個：
+// 「資產整理」代表首頁/歷史/分類這一組（點擊一律回首頁，因為首頁是這組的入口），其餘 3 個是直接對應的頁面
+// 點擊「目前已高亮」的一般標籤 = 回首頁；點擊其他標籤 = 直接切換到該頁
 const NAV_TABS = [
-  {key:"history",icon:"📈",label:"歷史"},
-  {key:"breakdown",icon:"📊",label:"分類"},
+  {key:"assetOrg",icon:"🗂️",label:"資產整理",group:["main","history","breakdown"]},
   {key:"bills",icon:"🧾",label:"帳單"},
   {key:"expenses",icon:"📒",label:"記帳"},
   {key:"todos",icon:"✅",label:"待辦"},
 ];
 
-function TagNav({currentPage, setPage, snapshotting, onSnapshot}) {
+function TagNav({currentPage, setPage}) {
   return (
     <div style={{display:"flex",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
-      <button onClick={onSnapshot} disabled={snapshotting} style={{
-        flexShrink:0,background:T.accent,border:"none",borderRadius:20,
-        padding:"8px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
-        display:"flex",alignItems:"center",gap:5,opacity:snapshotting?0.6:1,whiteSpace:"nowrap"
-      }}><span style={{fontSize:14}}>📸</span>{snapshotting?"...":"快照"}</button>
       {NAV_TABS.map(tab=>{
-        const active = currentPage===tab.key;
+        const active = tab.group ? tab.group.includes(currentPage) : currentPage===tab.key;
+        const onClick = tab.group ? ()=>setPage("main") : ()=>setPage(active?"main":tab.key);
         return (
           <button key={tab.key}
-            onClick={()=>setPage(active?"main":tab.key)}
+            onClick={onClick}
             style={{
               flexShrink:0,
               background: active?T.accent:T.surface,
@@ -1001,7 +997,7 @@ export default function AssetTracker() {
           </div>
           <div style={{fontSize:20,fontWeight:800}}>歷史資產變化</div>
         </div>
-        <TagNav currentPage="history" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+        <TagNav currentPage="history" setPage={setPage} />
       </div>
 
 
@@ -1121,7 +1117,7 @@ export default function AssetTracker() {
           </div>
           <div style={{fontSize:20,fontWeight:800}}>資產分類總覽</div>
         </div>
-        <TagNav currentPage="breakdown" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+        <TagNav currentPage="breakdown" setPage={setPage} />
       </div>
 
       <div style={{padding:"20px 16px 40px"}}>
@@ -1244,7 +1240,7 @@ export default function AssetTracker() {
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>每月帳單</div>
             <div style={{fontSize:20,fontWeight:800}}>🧾 帳單</div>
           </div>
-          <TagNav currentPage="bills" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+          <TagNav currentPage="bills" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1511,7 +1507,7 @@ export default function AssetTracker() {
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>個人記帳本</div>
             <div style={{fontSize:20,fontWeight:800}}>📒 記帳</div>
           </div>
-          <TagNav currentPage="expenses" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+          <TagNav currentPage="expenses" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1720,7 +1716,7 @@ export default function AssetTracker() {
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>待辦事項</div>
             <div style={{fontSize:20,fontWeight:800}}>✅ 待辦</div>
           </div>
-          <TagNav currentPage="todos" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+          <TagNav currentPage="todos" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1836,16 +1832,32 @@ export default function AssetTracker() {
         padding:"32px 20px 28px",
         borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{marginBottom:20}}>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
-            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-            {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
+        <div style={{marginBottom:20,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:12}}>
+          <div>
+            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
+              {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
+              {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
+            </div>
+            <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
           </div>
-          <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
+          <div style={{flexShrink:0,display:"flex",gap:8}}>
+            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} title="快照" style={{
+              width:40,height:40,borderRadius:"50%",background:T.accent,border:"none",cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,opacity:snapshotting?0.6:1
+            }}>📸</button>
+            <button onClick={()=>setPage("history")} title="歷史" style={{
+              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>📈</button>
+            <button onClick={()=>setPage("breakdown")} title="分類" style={{
+              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>📊</button>
+          </div>
         </div>
 
         {/* 固定標籤列 */}
-        <TagNav currentPage="main" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
+        <TagNav currentPage="main" setPage={setPage} />
       </div>
 
       {/* Owner filter */}
