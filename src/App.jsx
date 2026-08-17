@@ -333,6 +333,34 @@ function SnapshotModal({show, dateStr, totalValue, snapshotNote, setSnapshotNote
   );
 }
 
+function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, onCancel}) {
+  if (!show) return null;
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:1000}}>
+      <div style={{
+        background:T.surface,borderRadius:"20px 20px 0 0",padding:"28px 24px 40px",
+        width:"100%",maxWidth:500,boxShadow:"0 -8px 40px rgba(0,0,0,0.5)"
+      }}>
+        <div style={{width:36,height:4,borderRadius:2,background:T.border,margin:"0 auto 20px"}}/>
+        <h3 style={{margin:"0 0 8px",fontSize:18,fontWeight:800}}>{title}</h3>
+        {message&&<p style={{margin:"0 0 20px",fontSize:13,color:T.muted,lineHeight:1.6}}>{message}</p>}
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onConfirm} style={{
+            flex:1,background:T.accent,color:"#fff",border:"none",
+            borderRadius:12,padding:"13px 0",fontSize:15,fontWeight:700,
+            cursor:"pointer",fontFamily:"inherit"
+          }}>{confirmLabel}</button>
+          <button onClick={onCancel} style={{
+            flex:0,background:T.card,color:T.muted,border:`1px solid ${T.border}`,
+            borderRadius:12,padding:"13px 20px",fontSize:15,
+            cursor:"pointer",fontFamily:"inherit"
+          }}>取消</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AssetTracker() {
   const [assets,setAssets]               = useState([]);
   const [snapshots,setSnapshots]         = useState([]);
@@ -388,6 +416,13 @@ export default function AssetTracker() {
   const [ownerFilter,setOwnerFilter]     = useState("全部");
   const [toast,setToast]                 = useState(null);
   const [chartType,setChartType]         = useState("total");
+  const [todos,setTodos]                 = useState([]);
+  const [newTodoContent,setNewTodoContent] = useState("");
+  const [todoSaving,setTodoSaving]       = useState(false);
+  const [editingTodoId,setEditingTodoId] = useState(null);
+  const [editTodoForm,setEditTodoForm]   = useState(null);
+  const [openTodoSwipeId,setOpenTodoSwipeId] = useState(null);
+  const [confirmTodoId,setConfirmTodoId] = useState(null); // 待確認「標記完成」的待辦 id
 
   const showToast = (msg,type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
 
@@ -413,6 +448,7 @@ export default function AssetTracker() {
         setBillTemplates(cached.billTemplates||[]);
         setBills(cached.bills||[]);
         setExpenses(cached.expenses||[]);
+        setTodos(cached.todos||[]);
         setFxRates(cached.fxRates||{});
         setFxUpdated(cached.fxUpdated?new Date(cached.fxUpdated):null);
         setLoading(false); // 有快取就先讓畫面出現，背景再偷偷更新
@@ -428,16 +464,17 @@ export default function AssetTracker() {
         fetch(FX_API).then(r=>r.json()),
       ]);
 
-      let newAssets,newSnapshots,newBillTemplates,newBills,newExpenses;
+      let newAssets,newSnapshots,newBillTemplates,newBills,newExpenses,newTodos;
       if (listResult.status==="fulfilled") {
-        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expenses:eData} = listResult.value;
+        const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expenses:eData, todos:tData} = listResult.value;
         newAssets = (aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
         newSnapshots = (sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at));
         newBillTemplates = (btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
         newBills = bData||[];
         newExpenses = eData||[];
+        newTodos = tData||[];
         setAssets(newAssets); setSnapshots(newSnapshots); setBillTemplates(newBillTemplates);
-        setBills(newBills); setExpenses(newExpenses);
+        setBills(newBills); setExpenses(newExpenses); setTodos(newTodos);
       } else if (!hasCache) {
         showToast("資產載入失敗："+listResult.reason.message,"error");
       }
@@ -461,6 +498,7 @@ export default function AssetTracker() {
           billTemplates: newBillTemplates ?? prev.billTemplates ?? [],
           bills: newBills ?? prev.bills ?? [],
           expenses: newExpenses ?? prev.expenses ?? [],
+          todos: newTodos ?? prev.todos ?? [],
           fxRates: newFxRates ?? prev.fxRates ?? {},
           fxUpdated: newFxUpdated ? newFxUpdated.toISOString() : (prev.fxUpdated ?? null),
         }));
@@ -807,6 +845,89 @@ export default function AssetTracker() {
     } catch(e) { showToast("更新失敗："+e.message,"error"); }
   };
 
+
+  // ── 待辦事項功能 ──────────────────────────────────────────────────
+  const DAY_MS = 86400000;
+  const daysBetween = (isoStart, isoEnd) => {
+    const s = new Date(isoStart);
+    const e = isoEnd ? new Date(isoEnd) : new Date();
+    const sd = new Date(s.getFullYear(),s.getMonth(),s.getDate());
+    const ed = new Date(e.getFullYear(),e.getMonth(),e.getDate());
+    return Math.round((ed-sd)/DAY_MS);
+  };
+
+  // 完成超過 7 天的項目在畫面上隱藏（資料仍保留在試算表），其餘依「未完成在前、完成在後」排序
+  const visibleTodos = useMemo(()=>{
+    return todos
+      .filter(t=>{
+        if (!t.done) return true;
+        if (!t.completed_at) return true; // 沒有完成日期就先顯示，避免舊資料被誤藏
+        return daysBetween(t.completed_at, null) <= 7;
+      })
+      .slice()
+      .sort((a,b)=>{
+        if (!!a.done !== !!b.done) return a.done?1:-1;
+        if (!a.done) return new Date(a.created_at)-new Date(b.created_at);
+        return new Date(b.completed_at||0)-new Date(a.completed_at||0);
+      });
+  },[todos]);
+
+  const addTodo = async () => {
+    const content = newTodoContent.trim();
+    if (!content) return;
+    setTodoSaving(true);
+    try {
+      const result = await apiPost({action:"addTodo", payload:{
+        content, done:false, created_at:new Date().toISOString(), completed_at:"",
+      }});
+      setTodos(p=>[...p,result]);
+      setNewTodoContent("");
+    } catch(e) { showToast("新增失敗："+e.message,"error"); }
+    setTodoSaving(false);
+  };
+
+  // 打勾完成前先跳出確認彈窗（confirmTodoId 有值就代表彈窗開著），避免誤勾
+  const requestCompleteTodo = (id) => setConfirmTodoId(id);
+
+  const confirmCompleteTodo = async () => {
+    const id = confirmTodoId;
+    if (!id) return;
+    const payload = {done:true, completed_at:new Date().toISOString()};
+    setTodos(p=>p.map(t=>t.id===id?{...t,...payload}:t));
+    setConfirmTodoId(null);
+    try {
+      await apiPost({action:"updateTodo", id, payload});
+    } catch(e) { showToast("更新失敗："+e.message,"error"); }
+  };
+
+  // 取消已完成不需要二次確認，直接切回未完成
+  const uncompleteTodo = async (id) => {
+    const payload = {done:false, completed_at:""};
+    setTodos(p=>p.map(t=>t.id===id?{...t,...payload}:t));
+    try {
+      await apiPost({action:"updateTodo", id, payload});
+    } catch(e) { showToast("更新失敗："+e.message,"error"); }
+  };
+
+  const startEditTodo = (t) => { setEditingTodoId(t.id); setEditTodoForm({content:t.content||""}); };
+  const saveEditTodo = async (id) => {
+    const content = editTodoForm.content.trim();
+    if (!content) { showToast("內容不可空白","error"); return; }
+    setTodos(p=>p.map(t=>t.id===id?{...t,content}:t));
+    setEditingTodoId(null); setEditTodoForm(null);
+    try {
+      await apiPost({action:"updateTodo", id, payload:{content}});
+      showToast("已更新");
+    } catch(e) { showToast("更新失敗："+e.message,"error"); }
+  };
+
+  const deleteTodo = async (id) => {
+    try {
+      await apiPost({action:"deleteTodo", id});
+      setTodos(p=>p.filter(t=>t.id!==id));
+      showToast("已刪除");
+    } catch(e) { showToast("刪除失敗："+e.message,"error"); }
+  };
 
   if (!configured) return (
     <SetupScreen onSave={(url)=>{ setSheetsConfig(url); setConfigured(true); }} />
@@ -1568,6 +1689,129 @@ export default function AssetTracker() {
     );
   }
 
+  // ── TODOS (待辦事項) ─────────────────────────────────────────────────────
+  if (page==="todos") {
+    const undoneCount = todos.filter(t=>!t.done).length;
+    return (
+      <div style={pageStyle}>
+        {toast&&<Toast toast={toast}/>}
+        <div style={{
+          background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
+          padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
+          display:"flex",alignItems:"center",justifyContent:"space-between"
+        }}>
+          <div>
+            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>待辦事項</div>
+            <div style={{fontSize:20,fontWeight:800}}>✅ 待辦</div>
+          </div>
+          <button onClick={()=>setPage("main")} style={{
+            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
+          }}>🏠 首頁</button>
+        </div>
+
+        <div style={{padding:"20px 16px 40px"}}>
+          <div style={{background:T.card,borderRadius:12,padding:"10px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:12,color:T.muted}}>未完成</span>
+            <span style={{fontSize:15,fontWeight:800,color:T.accent}}>{undoneCount} 項</span>
+          </div>
+
+          {/* ＋ 新增待辦 */}
+          <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>內容</div>
+              <input
+                value={newTodoContent}
+                onChange={e=>setNewTodoContent(e.target.value)}
+                onKeyDown={e=>{ if(e.key==="Enter") addTodo(); }}
+                placeholder="例如：續繳車險、更新身分證地址"
+                style={inputSt}
+              />
+            </div>
+            <button onClick={addTodo} disabled={todoSaving} style={{
+              width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:12,
+              padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              opacity:todoSaving?0.6:1
+            }}>{todoSaving?"新增中...":"＋ 新增待辦"}</button>
+          </div>
+
+          {/* 待辦清單 */}
+          {visibleTodos.length===0 ? (
+            <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:13}}>
+              目前沒有待辦事項，用上面的表單新增第一筆吧
+            </div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {visibleTodos.map(t=>{
+                if (editingTodoId===t.id) return (
+                  <div key={t.id} style={{
+                    background:T.surface,borderRadius:12,border:`1px solid ${T.accent}40`,
+                    padding:"12px 14px",display:"flex",flexDirection:"column",gap:8
+                  }}>
+                    <div>
+                      <div style={labelSt}>內容</div>
+                      <input value={editTodoForm.content} onChange={e=>setEditTodoForm(f=>({...f,content:e.target.value}))} style={inputSt}/>
+                    </div>
+                    <div style={{display:"flex",gap:8,marginTop:4}}>
+                      <button onClick={()=>saveEditTodo(t.id)} style={{
+                        flex:1,background:"#10B981",color:"#fff",border:"none",borderRadius:8,
+                        padding:"9px 0",cursor:"pointer",fontWeight:700,fontFamily:"inherit"
+                      }}>✓ 儲存</button>
+                      <button onClick={()=>{setEditingTodoId(null);setEditTodoForm(null);}} style={{
+                        background:T.card,color:T.muted,border:`1px solid ${T.border}`,borderRadius:8,
+                        padding:"9px 16px",cursor:"pointer",fontFamily:"inherit"
+                      }}>取消</button>
+                    </div>
+                  </div>
+                );
+                const overdueDays = !t.done ? daysBetween(t.created_at, null) : null;
+                return (
+                <SwipeRow key={t.id} id={t.id} openId={openTodoSwipeId} setOpenId={setOpenTodoSwipeId}
+                  actions={[
+                    {key:"edit",icon:"✎",color:T.accent,onClick:()=>startEditTodo(t)},
+                    {key:"delete",icon:"✕",color:"#EF4444",onClick:()=>deleteTodo(t.id)},
+                  ]}
+                >
+                  <div style={{
+                    border:`1px solid ${T.border}`,
+                    padding:"12px 14px",display:"flex",alignItems:"center",gap:10
+                  }}>
+                    <button onClick={()=>t.done?uncompleteTodo(t.id):requestCompleteTodo(t.id)} style={{
+                      width:24,height:24,borderRadius:"50%",border:`2px solid ${t.done?"#10B981":T.border}`,
+                      background:t.done?"#10B981":"transparent",color:"#fff",cursor:"pointer",
+                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,padding:0
+                    }}>{t.done?"✓":""}</button>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,color:t.done?T.muted:T.text,textDecoration:t.done?"line-through":"none"}}>{t.content}</div>
+                      <div style={{fontSize:11,color:T.muted}}>
+                        {t.done ? (t.completed_at?`已完成・${fmtDate(t.completed_at)}`:"已完成") : `登記於 ${fmtDate(t.created_at)}`}
+                      </div>
+                    </div>
+                    {!t.done&&(
+                      <div style={{
+                        flexShrink:0,fontSize:10,fontWeight:700,color:T.muted,background:T.card,
+                        borderRadius:20,padding:"4px 8px",whiteSpace:"nowrap"
+                      }}>{overdueDays<=0?"今天登記":`拖 ${overdueDays} 天`}</div>
+                    )}
+                  </div>
+                </SwipeRow>
+              );})}
+            </div>
+          )}
+        </div>
+
+        <ConfirmModal
+          show={!!confirmTodoId}
+          title="確定要標記為完成嗎？"
+          message="標記完成後會移到清單最下方，7 天後會自動從畫面上隱藏（資料仍會保留在試算表裡）。"
+          confirmLabel="確認完成"
+          onConfirm={confirmCompleteTodo}
+          onCancel={()=>setConfirmTodoId(null)}
+        />
+      </div>
+    );
+  }
+
   // ── MAIN ──────────────────────────────────────────────────────────────────
   return (
     <div style={pageStyle}>
@@ -1615,6 +1859,11 @@ export default function AssetTracker() {
             padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
             display:"flex",flexDirection:"column",alignItems:"center",gap:4
           }}><span style={{fontSize:18}}>📒</span>記帳</button>
+          <button onClick={()=>setPage("todos")} style={{
+            flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,
+            padding:"12px 4px",cursor:"pointer",fontSize:13,fontFamily:"inherit",color:T.muted,
+            display:"flex",flexDirection:"column",alignItems:"center",gap:4
+          }}><span style={{fontSize:18}}>✅</span>待辦</button>
         </div>
 
         {/* Donut + legend */}
