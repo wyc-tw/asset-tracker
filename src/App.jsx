@@ -361,6 +361,44 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
   );
 }
 
+// 固定顯示在所有頁面的橫向標籤列：快照是動作（永遠是紫色），其餘 5 個是頁面切換
+// 點擊「目前已高亮」的那個標籤 = 回首頁；點擊其他標籤 = 直接切換到該頁
+const NAV_TABS = [
+  {key:"history",icon:"📈",label:"歷史"},
+  {key:"breakdown",icon:"📊",label:"分類"},
+  {key:"bills",icon:"🧾",label:"帳單"},
+  {key:"expenses",icon:"📒",label:"記帳"},
+  {key:"todos",icon:"✅",label:"待辦"},
+];
+
+function TagNav({currentPage, setPage, snapshotting, onSnapshot}) {
+  return (
+    <div style={{display:"flex",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
+      <button onClick={onSnapshot} disabled={snapshotting} style={{
+        flexShrink:0,background:T.accent,border:"none",borderRadius:20,
+        padding:"8px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
+        display:"flex",alignItems:"center",gap:5,opacity:snapshotting?0.6:1,whiteSpace:"nowrap"
+      }}><span style={{fontSize:14}}>📸</span>{snapshotting?"...":"快照"}</button>
+      {NAV_TABS.map(tab=>{
+        const active = currentPage===tab.key;
+        return (
+          <button key={tab.key}
+            onClick={()=>setPage(active?"main":tab.key)}
+            style={{
+              flexShrink:0,
+              background: active?T.accent:T.surface,
+              border: active?"none":`1px solid ${T.border}`,
+              borderRadius:20,padding:"8px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",
+              color: active?"#fff":T.muted,fontWeight: active?700:500,
+              display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"
+            }}
+          ><span style={{fontSize:14}}>{tab.icon}</span>{tab.label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AssetTracker() {
   const [assets,setAssets]               = useState([]);
   const [snapshots,setSnapshots]         = useState([]);
@@ -414,7 +452,6 @@ export default function AssetTracker() {
   const [showAdd,setShowAdd]             = useState(false);
   const [addForm,setAddForm]             = useState({bank:"富邦",account:"存款帳戶",category:"現金",name:"",quantity:"",original_value:"",currency:"TWD",owner:"本人"});
   const [ownerFilter,setOwnerFilter]     = useState("全部");
-  const [showLegend,setShowLegend]       = useState(false); // 首頁圓餅圖明細，預設收合，點擊圓餅圖才展開
   const [toast,setToast]                 = useState(null);
   const [chartType,setChartType]         = useState("total");
   const [todos,setTodos]                 = useState([]);
@@ -957,25 +994,16 @@ export default function AssetTracker() {
       <div style={{
         background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
-        display:"flex",alignItems:"center",justifyContent:"space-between"
       }}>
-        <div>
+        <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>
             {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
           </div>
           <div style={{fontSize:20,fontWeight:800}}>歷史資產變化</div>
         </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-            background:T.accent,color:"#fff",border:"none",borderRadius:10,
-            padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:snapshotting?0.6:1
-          }}>{snapshotting?"...":"📸 今日"}</button>
-          <button onClick={()=>setPage("main")} style={{
-            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>🏠 首頁</button>
-        </div>
+        <TagNav currentPage="history" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
       </div>
+
 
 
       <div style={{padding:"20px 20px 40px"}}>
@@ -1086,18 +1114,14 @@ export default function AssetTracker() {
       <div style={{
         background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
-        display:"flex",alignItems:"center",justifyContent:"space-between"
       }}>
-        <div>
+        <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>
             {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
           </div>
           <div style={{fontSize:20,fontWeight:800}}>資產分類總覽</div>
         </div>
-        <button onClick={()=>setPage("main")} style={{
-          background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-          padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-        }}>🏠 首頁</button>
+        <TagNav currentPage="breakdown" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
       </div>
 
       <div style={{padding:"20px 16px 40px"}}>
@@ -1215,16 +1239,12 @@ export default function AssetTracker() {
         <div style={{
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
-          display:"flex",alignItems:"center",justifyContent:"space-between"
         }}>
-          <div>
+          <div style={{marginBottom:16}}>
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>每月帳單</div>
             <div style={{fontSize:20,fontWeight:800}}>🧾 帳單</div>
           </div>
-          <button onClick={()=>setPage("main")} style={{
-            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>🏠 首頁</button>
+          <TagNav currentPage="bills" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1486,16 +1506,12 @@ export default function AssetTracker() {
         <div style={{
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
-          display:"flex",alignItems:"center",justifyContent:"space-between"
         }}>
-          <div>
+          <div style={{marginBottom:16}}>
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>個人記帳本</div>
             <div style={{fontSize:20,fontWeight:800}}>📒 記帳</div>
           </div>
-          <button onClick={()=>setPage("main")} style={{
-            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>🏠 首頁</button>
+          <TagNav currentPage="expenses" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1699,16 +1715,12 @@ export default function AssetTracker() {
         <div style={{
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
-          display:"flex",alignItems:"center",justifyContent:"space-between"
         }}>
-          <div>
+          <div style={{marginBottom:16}}>
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>待辦事項</div>
             <div style={{fontSize:20,fontWeight:800}}>✅ 待辦</div>
           </div>
-          <button onClick={()=>setPage("main")} style={{
-            background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-            padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted
-          }}>🏠 首頁</button>
+          <TagNav currentPage="todos" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1832,53 +1844,15 @@ export default function AssetTracker() {
           <div style={{fontSize:36,fontWeight:900,letterSpacing:-1,lineHeight:1}}>{fmt(totalValue)}</div>
         </div>
 
-        {/* 導覽列（2欄格子）＋ 甜甜圈圖 */}
-        <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:showLegend?16:24}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,flex:1,minWidth:0,justifyItems:"start"}}>
-            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-              width:"fit-content",background:T.accent,border:"none",borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
-              display:"flex",alignItems:"center",gap:6,opacity:snapshotting?0.6:1
-            }}><span style={{fontSize:15}}>📸</span>{snapshotting?"...":"快照"}</button>
-            <button onClick={()=>setPage("history")} style={{
-              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
-              display:"flex",alignItems:"center",gap:6
-            }}><span style={{fontSize:15}}>📈</span>歷史</button>
-            <button onClick={()=>setPage("breakdown")} style={{
-              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
-              display:"flex",alignItems:"center",gap:6
-            }}><span style={{fontSize:15}}>📊</span>分類</button>
-            <button onClick={()=>setPage("bills")} style={{
-              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
-              display:"flex",alignItems:"center",gap:6
-            }}><span style={{fontSize:15}}>🧾</span>帳單</button>
-            <button onClick={()=>setPage("expenses")} style={{
-              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
-              display:"flex",alignItems:"center",gap:6
-            }}><span style={{fontSize:15}}>📒</span>記帳</button>
-            <button onClick={()=>setPage("todos")} style={{
-              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
-              display:"flex",alignItems:"center",gap:6
-            }}><span style={{fontSize:15}}>✅</span>待辦</button>
-          </div>
+        {/* 固定標籤列 */}
+        <TagNav currentPage="main" setPage={setPage} snapshotting={snapshotting} onSnapshot={()=>setShowSnapshotModal(true)} />
 
-          <div
-            onClick={()=>setShowLegend(v=>!v)}
-            style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}}
-          >
-            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={120}/>
-            <div style={{fontSize:10,color:T.muted}}>{showLegend?"▴ 收合明細":"▾ 查看明細"}</div>
+        {/* Donut + legend */}
+        <div style={{display:"flex",alignItems:"center",gap:16,marginTop:20}}>
+          <div style={{flexShrink:0}}>
+            <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={140}/>
           </div>
-        </div>
-
-        {/* 銀行佔比明細：預設收合，點擊圓餅圖展開 */}
-        {showLegend&&(
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>
+          <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0}}>
             {bankBreakdown.slice(0,6).map((b,i)=>{
               const col=Object.values(BANK_COLORS)[i%9];
               return (
@@ -1891,7 +1865,7 @@ export default function AssetTracker() {
               );
             })}
           </div>
-        )}
+        </div>
 
       </div>
 
