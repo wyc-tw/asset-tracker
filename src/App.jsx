@@ -1834,35 +1834,35 @@ export default function AssetTracker() {
 
         {/* 導覽列（2欄格子）＋ 甜甜圈圖 */}
         <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:showLegend?16:24}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,flex:1,minWidth:0}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,flex:1,minWidth:0,justifyItems:"start"}}>
             <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} style={{
-              background:T.accent,border:"none",borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
+              width:"fit-content",background:T.accent,border:"none",borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:"#fff",fontWeight:700,
               display:"flex",alignItems:"center",gap:6,opacity:snapshotting?0.6:1
             }}><span style={{fontSize:15}}>📸</span>{snapshotting?"...":"快照"}</button>
             <button onClick={()=>setPage("history")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
               display:"flex",alignItems:"center",gap:6
             }}><span style={{fontSize:15}}>📈</span>歷史</button>
             <button onClick={()=>setPage("breakdown")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
               display:"flex",alignItems:"center",gap:6
             }}><span style={{fontSize:15}}>📊</span>分類</button>
             <button onClick={()=>setPage("bills")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
               display:"flex",alignItems:"center",gap:6
             }}><span style={{fontSize:15}}>🧾</span>帳單</button>
             <button onClick={()=>setPage("expenses")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
               display:"flex",alignItems:"center",gap:6
             }}><span style={{fontSize:15}}>📒</span>記帳</button>
             <button onClick={()=>setPage("todos")} style={{
-              background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
-              padding:"10px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
+              width:"fit-content",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,
+              padding:"10px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",color:T.muted,
               display:"flex",alignItems:"center",gap:6
             }}><span style={{fontSize:15}}>✅</span>待辦</button>
           </div>
