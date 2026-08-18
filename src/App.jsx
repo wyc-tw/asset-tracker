@@ -1866,6 +1866,14 @@ export default function AssetTracker() {
               width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
               display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
             }}>📊</button>
+            <button onClick={()=>setShowAdd(true)} title="新增資產" style={{
+              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>➕</button>
+            <button onClick={()=>{ clearSheetsConfig(); setConfigured(false); }} title="重新設定試算表連線" style={{
+              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>⚙️</button>
           </div>
         </div>
 
@@ -2043,13 +2051,6 @@ export default function AssetTracker() {
         </div>
       )}
 
-      <div style={{textAlign:"center",padding:"10px 20px 0"}}>
-        <button onClick={()=>{ clearSheetsConfig(); setConfigured(false); }} style={{
-          background:"none",border:"none",color:T.muted,fontSize:10,opacity:0.4,
-          cursor:"pointer",fontFamily:"inherit"
-        }}>⚙ 重新設定試算表連線</button>
-      </div>
-
       {/* 資產配置圓餅圖：偶爾看一下整體配置狀況，放在頁面最下方 */}
       <div style={{padding:"20px 20px 32px"}}>
         <div style={{
@@ -2078,18 +2079,6 @@ export default function AssetTracker() {
           </div>
         </div>
       </div>
-
-      {/* FAB Add */}
-      <button onClick={()=>setShowAdd(true)} style={{
-        position:"fixed",bottom:28,right:24,
-        width:56,height:56,borderRadius:"50%",
-        background:`linear-gradient(135deg,${T.accent},#5B8CF5)`,
-        border:"none",cursor:"pointer",
-        fontSize:28,color:"#fff",fontWeight:300,
-        boxShadow:"0 8px 24px rgba(124,110,247,0.5)",
-        display:"flex",alignItems:"center",justifyContent:"center",
-        lineHeight:1,zIndex:100
-      }}>+</button>
 
       {/* Snapshot modal */}
       <SnapshotModal
