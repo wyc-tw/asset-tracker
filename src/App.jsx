@@ -363,13 +363,12 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
 
 // 固定顯示在所有頁面的橫向標籤列，共 4 個：
 // 「資產整理」代表首頁(待辦)以外的資產相關頁面群組（歷史/分類都算在裡面，點擊一律進到資產整理頁）
-// 文字統一顯示「WYC」（使用者名字縮寫），不同頁面靠圖示＋高亮顏色＋頁面內容本身辨識，走個人化風格
 // 首頁是「待辦事項」：點擊「目前已高亮」的一般標籤 = 回首頁（待辦）；點擊其他標籤 = 直接切換到該頁
 const NAV_TABS = [
-  {key:"assetOrg",icon:"🗂️",label:"WYC",group:["main","history","breakdown"]},
-  {key:"bills",icon:"🧾",label:"WYC"},
-  {key:"expenses",icon:"📒",label:"WYC"},
-  {key:"todos",icon:"✅",label:"WYC"},
+  {key:"assetOrg",icon:"🗂️",label:"資產整理",group:["main","history","breakdown"]},
+  {key:"bills",icon:"🧾",label:"帳單"},
+  {key:"expenses",icon:"📒",label:"記帳"},
+  {key:"todos",icon:"✅",label:"待辦"},
 ];
 
 function TagNav({currentPage, setPage}) {
@@ -1728,7 +1727,7 @@ export default function AssetTracker() {
         }}>
           <div style={{marginBottom:16}}>
             <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>待辦事項</div>
-            <div style={{fontSize:20,fontWeight:800}}>✅ 待辦</div>
+            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
           </div>
           <TagNav currentPage="todos" setPage={setPage} />
         </div>
