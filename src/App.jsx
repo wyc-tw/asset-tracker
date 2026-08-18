@@ -1845,36 +1845,11 @@ export default function AssetTracker() {
         padding:"32px 20px 28px",
         borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{marginBottom:20,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:12}}>
-          <div>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
-              {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-              {fxUpdated&&<span style={{marginLeft:8,color:"#10B981"}}>● 匯率即時</span>}
-            </div>
-            <div style={{fontSize:20,fontWeight:800}}>🗂️ 資產整理</div>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
+            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
           </div>
-          <div style={{flexShrink:0,display:"flex",gap:8}}>
-            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} title="快照" style={{
-              width:40,height:40,borderRadius:"50%",background:T.accent,border:"none",cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,opacity:snapshotting?0.6:1
-            }}>📸</button>
-            <button onClick={()=>setPage("history")} title="歷史" style={{
-              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
-            }}>📈</button>
-            <button onClick={()=>setPage("breakdown")} title="分類" style={{
-              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
-            }}>📊</button>
-            <button onClick={()=>setShowAdd(true)} title="新增資產" style={{
-              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
-            }}>➕</button>
-            <button onClick={()=>{ clearSheetsConfig(); setConfigured(false); }} title="重新設定試算表連線" style={{
-              width:40,height:40,borderRadius:"50%",background:T.surface,border:`1px solid ${T.border}`,cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
-            }}>⚙️</button>
-          </div>
+          <div style={{fontSize:20,fontWeight:800}}>🗂️ 資產整理</div>
         </div>
 
         {/* 固定標籤列 */}
@@ -2034,23 +2009,6 @@ export default function AssetTracker() {
         })}
       </div>
 
-      {/* FX bar - bottom */}
-      {Object.keys(fxRates).length>0&&(
-        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",padding:"12px 20px 0",opacity:0.45}}>
-          {["USD","JPY"].map(c=>{
-            const rate=fxRates[c];
-            if (!rate) return null;
-            return (
-              <div key={c} style={{fontSize:11,color:T.muted}}>
-                <span>{c} </span>
-                <span style={{fontWeight:600}}>{rate.toFixed(2)}</span>
-              </div>
-            );
-          })}
-          {fxUpdated&&<div style={{fontSize:10,color:T.muted,width:"100%",textAlign:"center"}}>匯率更新：{fxUpdated.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}</div>}
-        </div>
-      )}
-
       {/* 資產配置圓餅圖：偶爾看一下整體配置狀況，放在頁面最下方 */}
       <div style={{padding:"20px 20px 32px"}}>
         <div style={{
@@ -2077,8 +2035,49 @@ export default function AssetTracker() {
               );
             })}
           </div>
+
+          <div style={{flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
+            <button onClick={()=>setShowSnapshotModal(true)} disabled={snapshotting} title="快照" style={{
+              width:40,height:40,borderRadius:"50%",background:T.accent,border:"none",cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,opacity:snapshotting?0.6:1
+            }}>📸</button>
+            <button onClick={()=>setPage("history")} title="歷史" style={{
+              width:40,height:40,borderRadius:"50%",background:T.card,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>📈</button>
+            <button onClick={()=>setPage("breakdown")} title="分類" style={{
+              width:40,height:40,borderRadius:"50%",background:T.card,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>📊</button>
+            <button onClick={()=>setShowAdd(true)} title="新增資產" style={{
+              width:40,height:40,borderRadius:"50%",background:T.card,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>➕</button>
+            <button onClick={()=>{ clearSheetsConfig(); setConfigured(false); }} title="重新設定試算表連線" style={{
+              width:40,height:40,borderRadius:"50%",background:T.card,border:`1px solid ${T.border}`,cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:17
+            }}>⚙️</button>
+          </div>
         </div>
       </div>
+
+      {/* FX bar - 頁面最下方，不重要的資訊放這裡就好 */}
+      {Object.keys(fxRates).length>0&&(
+        <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center",flexWrap:"wrap",padding:"0 20px 20px",opacity:0.45}}>
+          {fxUpdated&&<span style={{fontSize:11,color:"#10B981"}}>●&nbsp;匯率即時</span>}
+          {["USD","JPY"].map(c=>{
+            const rate=fxRates[c];
+            if (!rate) return null;
+            return (
+              <div key={c} style={{fontSize:11,color:T.muted}}>
+                <span>{c} </span>
+                <span style={{fontWeight:600}}>{rate.toFixed(2)}</span>
+              </div>
+            );
+          })}
+          {fxUpdated&&<div style={{fontSize:10,color:T.muted,width:"100%",textAlign:"center"}}>匯率更新：{fxUpdated.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}</div>}
+        </div>
+      )}
 
       {/* Snapshot modal */}
       <SnapshotModal
