@@ -501,14 +501,27 @@ export default function AssetTracker() {
       let newAssets,newSnapshots,newBillTemplates,newBills,newExpenses,newTodos;
       if (listResult.status==="fulfilled") {
         const {assets:aData, snapshots:sData, bill_templates:btData, bills:bData, expenses:eData, todos:tData} = listResult.value;
-        newAssets = (aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
-        newSnapshots = (sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at));
-        newBillTemplates = (btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
-        newBills = bData||[];
-        newExpenses = eData||[];
-        newTodos = tData||[];
-        setAssets(newAssets); setSnapshots(newSnapshots); setBillTemplates(newBillTemplates);
-        setBills(newBills); setExpenses(newExpenses); setTodos(newTodos);
+        const freshAssets = (aData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+        const freshSnapshots = (sData||[]).slice().sort((a,b)=>new Date(a.taken_at)-new Date(b.taken_at));
+        const freshBillTemplates = (btData||[]).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+        const freshBills = bData||[];
+        const freshExpenses = eData||[];
+        const freshTodos = tData||[];
+
+        // 這次背景抓取的資料，可能比使用者剛剛手動新增的項目還舊（伺服器讀取發生在新增「之前」）
+        // 所以不要整批覆蓋，改成合併：保留畫面上有、但這次抓回來的清單裡沒有的項目，避免剛新增的東西被蓋掉消失
+        const mergeKeepLocal = (fresh, prev) => {
+          const freshIds = new Set(fresh.map(x=>x.id));
+          const extra = (prev||[]).filter(x=>!freshIds.has(x.id));
+          return extra.length ? [...fresh, ...extra] : fresh;
+        };
+
+        setAssets(prev=>{ newAssets = mergeKeepLocal(freshAssets, prev).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)); return newAssets; });
+        setSnapshots(prev=>{ newSnapshots = mergeKeepLocal(freshSnapshots, prev); return newSnapshots; });
+        setBillTemplates(prev=>{ newBillTemplates = mergeKeepLocal(freshBillTemplates, prev).slice().sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)); return newBillTemplates; });
+        setBills(prev=>{ newBills = mergeKeepLocal(freshBills, prev); return newBills; });
+        setExpenses(prev=>{ newExpenses = mergeKeepLocal(freshExpenses, prev); return newExpenses; });
+        setTodos(prev=>{ newTodos = mergeKeepLocal(freshTodos, prev); return newTodos; });
       } else if (!hasCache) {
         showToast("資產載入失敗："+listResult.reason.message,"error");
       }
