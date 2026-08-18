@@ -1004,10 +1004,10 @@ export default function AssetTracker() {
         background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+          <TagNav currentPage="history" setPage={setPage} />
         </div>
-        <TagNav currentPage="history" setPage={setPage} />
       </div>
 
 
@@ -1121,10 +1121,10 @@ export default function AssetTracker() {
         background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+          <TagNav currentPage="breakdown" setPage={setPage} />
         </div>
-        <TagNav currentPage="breakdown" setPage={setPage} />
       </div>
 
       <div style={{padding:"20px 16px 40px"}}>
@@ -1243,10 +1243,10 @@ export default function AssetTracker() {
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+            <TagNav currentPage="bills" setPage={setPage} />
           </div>
-          <TagNav currentPage="bills" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1509,10 +1509,10 @@ export default function AssetTracker() {
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+            <TagNav currentPage="expenses" setPage={setPage} />
           </div>
-          <TagNav currentPage="expenses" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1717,10 +1717,10 @@ export default function AssetTracker() {
           background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+            <TagNav currentPage="todos" setPage={setPage} />
           </div>
-          <TagNav currentPage="todos" setPage={setPage} />
         </div>
 
         <div style={{padding:"20px 16px 40px"}}>
@@ -1833,15 +1833,14 @@ export default function AssetTracker() {
       {/* Hero header */}
       <div style={{
         background:`linear-gradient(160deg, #1A1D27 0%, #12141E 100%)`,
-        padding:"32px 20px 28px",
+        padding:"24px 20px 20px",
         borderBottom:`1px solid ${T.border}`,
       }}>
-        <div style={{marginBottom:20}}>
-          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div style={{fontSize:20,fontWeight:800,flexShrink:0}}>WYC</div>
+          {/* 固定標籤列 */}
+          <TagNav currentPage="main" setPage={setPage} />
         </div>
-
-        {/* 固定標籤列 */}
-        <TagNav currentPage="main" setPage={setPage} />
       </div>
 
       {/* Owner filter */}
