@@ -1943,7 +1943,7 @@ export default function AssetTracker() {
                                             {options.map(o=><option key={o} value={o}>{(labelMap&&labelMap[o])||o}</option>)}
                                           </select>
                                         ) : (
-                                          <input type={kind==="number"?"number":"text"} step={kind==="number"?"any":undefined}
+                                          <input type={kind==="number"?"text":"text"} inputMode={kind==="number"?"decimal":undefined}
                                             value={editForm[key]||""} onChange={e=>setEditForm(f=>({...f,[key]:e.target.value}))} style={inputSt}/>
                                         )}
                                       </div>
@@ -2117,8 +2117,8 @@ export default function AssetTracker() {
                   ) : (
                     <input
                       placeholder={placeholder}
-                      type={kind==="number"?"number":"text"}
-                      step={kind==="number"?"any":undefined}
+                      type="text"
+                      inputMode={kind==="number"?"decimal":undefined}
                       value={addForm[key]} onChange={e=>setAddForm(f=>({...f,[key]:e.target.value}))} style={inputSt}/>
                   )}
                 </div>
