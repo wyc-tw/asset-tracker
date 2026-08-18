@@ -362,13 +362,14 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
 }
 
 // 固定顯示在所有頁面的橫向標籤列，共 4 個：
-// 「資產整理」代表首頁/歷史/分類這一組（點擊一律回首頁，因為首頁是這組的入口），其餘 3 個是直接對應的頁面
-// 點擊「目前已高亮」的一般標籤 = 回首頁；點擊其他標籤 = 直接切換到該頁
+// 「資產整理」代表首頁(待辦)以外的資產相關頁面群組（歷史/分類都算在裡面，點擊一律進到資產整理頁）
+// 文字統一顯示「WYC」（使用者名字縮寫），不同頁面靠圖示＋高亮顏色＋頁面內容本身辨識，走個人化風格
+// 首頁是「待辦事項」：點擊「目前已高亮」的一般標籤 = 回首頁（待辦）；點擊其他標籤 = 直接切換到該頁
 const NAV_TABS = [
-  {key:"assetOrg",icon:"🗂️",label:"資產整理",group:["main","history","breakdown"]},
-  {key:"bills",icon:"🧾",label:"帳單"},
-  {key:"expenses",icon:"📒",label:"記帳"},
-  {key:"todos",icon:"✅",label:"待辦"},
+  {key:"assetOrg",icon:"🗂️",label:"WYC",group:["main","history","breakdown"]},
+  {key:"bills",icon:"🧾",label:"WYC"},
+  {key:"expenses",icon:"📒",label:"WYC"},
+  {key:"todos",icon:"✅",label:"WYC"},
 ];
 
 function TagNav({currentPage, setPage}) {
@@ -376,7 +377,7 @@ function TagNav({currentPage, setPage}) {
     <div style={{display:"flex",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
       {NAV_TABS.map(tab=>{
         const active = tab.group ? tab.group.includes(currentPage) : currentPage===tab.key;
-        const onClick = tab.group ? ()=>setPage("main") : ()=>setPage(active?"main":tab.key);
+        const onClick = tab.group ? ()=>setPage("main") : ()=>setPage(active?"todos":tab.key);
         return (
           <button key={tab.key}
             onClick={onClick}
@@ -406,7 +407,7 @@ export default function AssetTracker() {
   const [snapshotNote,setSnapshotNote]     = useState("");
   const [showSnapshotModal,setShowSnapshotModal] = useState(false);
   const [configured,setConfigured] = useState(()=>!!SHEETS_API_URL);
-  const [page,setPage]                   = useState("main");
+  const [page,setPage]                   = useState("todos"); // 待辦事項是首頁，最重要要常提醒自己
   const [billTemplates,setBillTemplates] = useState([]);
   const [bills,setBills]                 = useState([]);
   const [billsMonth,setBillsMonth]       = useState(()=>{
