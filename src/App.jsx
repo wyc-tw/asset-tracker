@@ -1005,10 +1005,7 @@ export default function AssetTracker() {
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
       }}>
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>
-            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-          </div>
-          <div style={{fontSize:20,fontWeight:800}}>歷史資產變化</div>
+          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
         </div>
         <TagNav currentPage="history" setPage={setPage} />
       </div>
@@ -1125,10 +1122,7 @@ export default function AssetTracker() {
         padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
       }}>
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>
-            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-          </div>
-          <div style={{fontSize:20,fontWeight:800}}>資產分類總覽</div>
+          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
         </div>
         <TagNav currentPage="breakdown" setPage={setPage} />
       </div>
@@ -1250,8 +1244,7 @@ export default function AssetTracker() {
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
           <div style={{marginBottom:16}}>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>每月帳單</div>
-            <div style={{fontSize:20,fontWeight:800}}>🧾 帳單</div>
+            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
           </div>
           <TagNav currentPage="bills" setPage={setPage} />
         </div>
@@ -1517,8 +1510,7 @@ export default function AssetTracker() {
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
           <div style={{marginBottom:16}}>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>個人記帳本</div>
-            <div style={{fontSize:20,fontWeight:800}}>📒 記帳</div>
+            <div style={{fontSize:20,fontWeight:800}}>WYC</div>
           </div>
           <TagNav currentPage="expenses" setPage={setPage} />
         </div>
@@ -1726,7 +1718,6 @@ export default function AssetTracker() {
           padding:"24px 20px 20px",borderBottom:`1px solid ${T.border}`,
         }}>
           <div style={{marginBottom:16}}>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>待辦事項</div>
             <div style={{fontSize:20,fontWeight:800}}>WYC</div>
           </div>
           <TagNav currentPage="todos" setPage={setPage} />
@@ -1846,10 +1837,7 @@ export default function AssetTracker() {
         borderBottom:`1px solid ${T.border}`,
       }}>
         <div style={{marginBottom:20}}>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>
-            {dateStr} · {ownerFilter==="全部"?"全部資產":ownerFilter}
-          </div>
-          <div style={{fontSize:20,fontWeight:800}}>🗂️ 資產整理</div>
+          <div style={{fontSize:20,fontWeight:800}}>WYC</div>
         </div>
 
         {/* 固定標籤列 */}
