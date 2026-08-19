@@ -1535,14 +1535,14 @@ export default function AssetTracker() {
                     <button key={name} type="button"
                       onClick={()=>setExpenseForm(f=>({...f,category:name}))}
                       style={{
-                        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,
+                        display:"flex",alignItems:"center",justifyContent:"center",
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:12,padding:"8px 2px",fontSize:10,fontWeight:active?700:500,
+                        borderRadius:12,padding:"8px 2px",fontSize:11,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
-                    ><span style={{fontSize:15}}>{expenseCatIcon(name)}</span>{name}</button>
+                    >{name}</button>
                   );
                 })}
               </div>
@@ -1560,7 +1560,7 @@ export default function AssetTracker() {
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:12,padding:"8px 2px",fontSize:10,fontWeight:active?700:500,
+                        borderRadius:12,padding:"8px 2px",fontSize:11,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
                     >{p}</button>
@@ -2130,15 +2130,15 @@ export default function AssetTracker() {
                 <strong style={{color:T.accent}}>{(toTWD(parseFloat(addForm.original_value),addForm.currency)/(totalValue+toTWD(parseFloat(addForm.original_value),addForm.currency))*100).toFixed(1)}%</strong>
               </div>
             )}
-            <div style={{display:"flex",gap:10,marginTop:4}}>
+            <div style={{display:"flex",gap:10,marginTop:4,flexWrap:"nowrap"}}>
               <button onClick={addAsset} disabled={saving} style={{
-                flex:1,background:T.accent,color:"#fff",border:"none",
+                flex:"1 1 auto",minWidth:0,background:T.accent,color:"#fff",border:"none",
                 borderRadius:12,padding:"13px 0",fontSize:15,fontWeight:700,
-                cursor:"pointer",fontFamily:"inherit",opacity:saving?0.6:1
+                cursor:"pointer",fontFamily:"inherit",opacity:saving?0.6:1,whiteSpace:"nowrap"
               }}>{saving?"新增中...":"確認新增"}</button>
               <button onClick={()=>setShowAdd(false)} style={{
-                flex:0,background:T.card,color:T.muted,border:`1px solid ${T.border}`,
-                borderRadius:12,padding:"13px 20px",fontSize:15,
+                flex:"0 0 auto",background:T.card,color:T.muted,border:`1px solid ${T.border}`,
+                borderRadius:12,padding:"13px 20px",fontSize:15,whiteSpace:"nowrap",
                 cursor:"pointer",fontFamily:"inherit"
               }}>取消</button>
             </div>
