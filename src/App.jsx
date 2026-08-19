@@ -365,7 +365,7 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
 // 「資產整理」代表首頁(待辦)以外的資產相關頁面群組（歷史/分類都算在裡面，點擊一律進到資產整理頁）
 // 首頁是「待辦事項」：點擊「目前已高亮」的一般標籤 = 回首頁（待辦）；點擊其他標籤 = 直接切換到該頁
 const NAV_TABS = [
-  {key:"assetOrg",icon:"🗂️",label:"資產整理",group:["main","history","breakdown"]},
+  {key:"assetOrg",icon:"🗂️",label:"資產",group:["main","history","breakdown"]},
   {key:"bills",icon:"🧾",label:"帳單"},
   {key:"expenses",icon:"📒",label:"記帳"},
   {key:"todos",icon:"✅",label:"待辦"},
@@ -1528,21 +1528,21 @@ export default function AssetTracker() {
 
             <div style={{marginBottom:14}}>
               <div style={labelSt}>分類</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
                 {COMMON_EXPENSE_CATEGORIES.map(name=>{
                   const active = expenseForm.category===name;
                   return (
                     <button key={name} type="button"
                       onClick={()=>setExpenseForm(f=>({...f,category:name}))}
                       style={{
-                        display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+                        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:20,padding:"8px 6px",fontSize:13,fontWeight:active?700:500,
+                        borderRadius:12,padding:"8px 2px",fontSize:10,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
-                    ><span>{expenseCatIcon(name)}</span>{name}</button>
+                    ><span style={{fontSize:15}}>{expenseCatIcon(name)}</span>{name}</button>
                   );
                 })}
               </div>
@@ -1550,7 +1550,7 @@ export default function AssetTracker() {
 
             <div style={{marginBottom:14}}>
               <div style={labelSt}>付款方式</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
                 {PAYMENT_METHODS.map(p=>{
                   const active = expenseForm.payment_method===p;
                   return (
@@ -1560,7 +1560,7 @@ export default function AssetTracker() {
                         background:active?`${T.accent}22`:T.card,
                         border:`1px solid ${active?T.accent:T.border}`,
                         color:active?T.accent:T.text,
-                        borderRadius:20,padding:"8px 6px",fontSize:13,fontWeight:active?700:500,
+                        borderRadius:12,padding:"8px 2px",fontSize:10,fontWeight:active?700:500,
                         cursor:"pointer",fontFamily:"inherit"
                       }}
                     >{p}</button>
@@ -1796,7 +1796,7 @@ export default function AssetTracker() {
                       <div style={{
                         flexShrink:0,fontSize:10,fontWeight:700,color:T.muted,background:T.card,
                         borderRadius:20,padding:"4px 8px",whiteSpace:"nowrap"
-                      }}>{overdueDays<=0?"今天登記":`拖 ${overdueDays} 天`}</div>
+                      }}>{overdueDays<=0?"今天登記":`已過 ${overdueDays} 天`}</div>
                     )}
                   </div>
                 </SwipeRow>
