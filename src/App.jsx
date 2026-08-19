@@ -407,6 +407,12 @@ export default function AssetTracker() {
   const [showSnapshotModal,setShowSnapshotModal] = useState(false);
   const [configured,setConfigured] = useState(()=>!!SHEETS_API_URL);
   const [page,setPage]                   = useState("todos"); // 待辦事項是首頁，最重要要常提醒自己
+
+  // 每次切換頁面（不管是點快照/歷史/分類，還是任何導覽），自動把捲軸拉回最上面，
+  // 不然如果是從頁面下方按鈕點過去的，會停在原本捲動的位置，還要自己往上拉
+  useEffect(()=>{
+    window.scrollTo(0,0);
+  },[page]);
   const [billTemplates,setBillTemplates] = useState([]);
   const [bills,setBills]                 = useState([]);
   const [billsMonth,setBillsMonth]       = useState(()=>{
