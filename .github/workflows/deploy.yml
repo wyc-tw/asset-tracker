@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+# 每次 main 分支有新的 push，就自動觸發建置＋部署
+# 也可以在 GitHub 網頁的 Actions 頁籤手動點「Run workflow」重新跑一次
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 讓這個 workflow 有權限寫入 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一時間只允許一個部署在跑，避免衝突
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 抓取原始碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 安裝套件
+        run: npm ci
+
+      - name: 建置（npm run build）
+        run: npm run build
+
+      - name: 上傳建置結果
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
