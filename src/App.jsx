@@ -200,7 +200,7 @@ function SetupScreen({onSave}) {
 
 function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
   const [dragX,setDragX] = useState(0);
-  const dragRef = useState(()=>({startX:0,startY:0,dragging:false,locked:null,x:0}))[0];
+  const dragRef = useState(()=>({startX:0,startY:0,dragging:false,locked:null,x:0,suppressClick:false}))[0];
   const ACTION_W = 56;
   const maxOffset = -(actions.length*ACTION_W);
   const isOpen = openId===id;
@@ -231,6 +231,7 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
   const onTouchEnd = ()=>{
     if (dragRef.locked==="x") {
       setOpenId(dragRef.x < maxOffset/2 ? id : null);
+      dragRef.suppressClick = true; // 這次放開後緊接著補發的 click 要忽略，不然剛滑開又會被收合
     }
     dragRef.dragging = false; dragRef.locked = null;
   };
@@ -259,6 +260,7 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
     const onMouseUp = ()=>{
       if (dragRef.locked==="x") {
         setOpenId(dragRef.x < maxOffset/2 ? id : null);
+        dragRef.suppressClick = true; // 這次放開後緊接著補發的 click 要忽略，不然剛滑開又會被收合
       }
       dragRef.dragging = false; dragRef.locked = null;
       window.removeEventListener("mousemove", onMouseMove);
@@ -281,7 +283,10 @@ function SwipeRow({id, openId, setOpenId, actions, borderRadius=12, children}) {
       <div
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown}
-        onClick={e=>{ if(isOpen){ e.preventDefault(); e.stopPropagation(); setOpenId(null);} }}
+        onClick={e=>{
+          if (dragRef.suppressClick) { dragRef.suppressClick = false; e.preventDefault(); e.stopPropagation(); return; }
+          if (isOpen) { e.preventDefault(); e.stopPropagation(); setOpenId(null); }
+        }}
         style={{
           transform:`translateX(${translateX}px)`,
           transition:dragRef.dragging?"none":"transform 0.2s ease",
