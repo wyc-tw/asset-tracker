@@ -426,7 +426,7 @@ export default function AssetTracker() {
   const [newTemplateName,setNewTemplateName] = useState("");
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
-  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:"",note:"",month:billsMonth});
+  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:new Date().toISOString().slice(0,10),note:"",month:billsMonth});
   const [expenses,setExpenses] = useState([]);
   const [expensesMonth,setExpensesMonth] = useState(()=>{
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -778,7 +778,7 @@ export default function AssetTracker() {
       pendingAddIdsRef.current.add(result.id);
       setBills(p=>[...p,result]);
       // 補歷史資料時常常會連續新增好幾筆同一個月，所以月份保留、其他欄位清空
-      setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:"",note:"",month:f.month}));
+      setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:new Date().toISOString().slice(0,10),note:"",month:f.month}));
       showToast(`已新增到 ${billForm.month||billsMonth}`);
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
     setBillSaving(false);
