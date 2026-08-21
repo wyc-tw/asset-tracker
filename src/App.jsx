@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ── Google 試算表後端設定 ──────────────────────────────────────
@@ -469,6 +469,11 @@ export default function AssetTracker() {
   const [openTodoSwipeId,setOpenTodoSwipeId] = useState(null);
   const [confirmTodoId,setConfirmTodoId] = useState(null); // 待確認「標記完成」的待辦 id
 
+  // 追蹤「剛新增、還在等首次背景讀取回來確認」的項目 id。
+  // 只有這些 id 在首次背景讀取合併時會被保護，其餘一律以伺服器最新資料為準，
+  // 這樣被刪除的東西才不會因為殘留在本機快取裡，重新整理後又跑回來
+  const pendingAddIdsRef = useRef(new Set());
+
   const showToast = (msg,type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
 
   const toTWD = useCallback((amount,currency) => {
@@ -520,10 +525,12 @@ export default function AssetTracker() {
         const freshTodos = tData||[];
 
         // 這次背景抓取的資料，可能比使用者剛剛手動新增的項目還舊（伺服器讀取發生在新增「之前」）
-        // 所以不要整批覆蓋，改成合併：保留畫面上有、但這次抓回來的清單裡沒有的項目，避免剛新增的東西被蓋掉消失
+        // 但只保護「真的剛新增、還沒確認同步」的那幾筆（pendingAddIdsRef 記錄的 id），
+        // 其餘一律以伺服器最新資料為準——不然被刪除的東西會因為殘留在本機快取裡，重新整理後又跑回來
         const mergeKeepLocal = (fresh, prev) => {
+          if (pendingAddIdsRef.current.size===0) return fresh;
           const freshIds = new Set(fresh.map(x=>x.id));
-          const extra = (prev||[]).filter(x=>!freshIds.has(x.id));
+          const extra = (prev||[]).filter(x=>pendingAddIdsRef.current.has(x.id) && !freshIds.has(x.id));
           return extra.length ? [...fresh, ...extra] : fresh;
         };
 
@@ -533,6 +540,7 @@ export default function AssetTracker() {
         setBills(prev=>{ newBills = mergeKeepLocal(freshBills, prev); return newBills; });
         setExpenses(prev=>{ newExpenses = mergeKeepLocal(freshExpenses, prev); return newExpenses; });
         setTodos(prev=>{ newTodos = mergeKeepLocal(freshTodos, prev); return newTodos; });
+        pendingAddIdsRef.current.clear(); // 這次背景讀取已經處理完，保護窗口關閉，之後都直接信任伺服器資料
       } else if (!hasCache) {
         showToast("資產載入失敗："+listResult.reason.message,"error");
       }
@@ -692,6 +700,7 @@ export default function AssetTracker() {
     };
     try {
       const result = await apiPost({action:"addAsset", payload});
+      pendingAddIdsRef.current.add(result.id);
       setAssets(p=>[...p,result]);
       showToast("新增成功"); setShowAdd(false); setAddForm({bank:"富邦",account:"存款帳戶",category:"現金",name:"",quantity:"",original_value:"",currency:"TWD",owner:"本人"});
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
@@ -720,6 +729,7 @@ export default function AssetTracker() {
     };
     try {
       const result = await apiPost({action:"addSnapshot", payload});
+      pendingAddIdsRef.current.add(result.id);
       setSnapshots(p=>[...p,result]);
       showToast("✅ 已記錄今日快照");
     } catch(e) { showToast("快照失敗："+e.message,"error"); }
@@ -765,6 +775,7 @@ export default function AssetTracker() {
         note: billForm.note||"",
         auto_debit: !!billForm.auto_debit,
       }});
+      pendingAddIdsRef.current.add(result.id);
       setBills(p=>[...p,result]);
       // 補歷史資料時常常會連續新增好幾筆同一個月，所以月份保留、其他欄位清空
       setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:"",month:f.month}));
@@ -822,6 +833,7 @@ export default function AssetTracker() {
         due_day:newTemplateDueDay?parseInt(newTemplateDueDay,10):"",
         auto_debit:!!newTemplateAutoDebit,
       }});
+      pendingAddIdsRef.current.add(result.id);
       setBillTemplates(p=>[...p,result]);
       setNewTemplateName(""); setNewTemplateDueDay(""); setNewTemplateAutoDebit(false);
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
@@ -869,6 +881,7 @@ export default function AssetTracker() {
         date:expenseForm.date, category:expenseForm.category, amount:amt,
         payment_method:expenseForm.payment_method, note:expenseForm.note||"",
       }});
+      pendingAddIdsRef.current.add(result.id);
       setExpenses(p=>[...p,result]);
       setExpenseForm(f=>({...f,amount:"",note:""}));
       showToast("已記一筆");
@@ -938,6 +951,7 @@ export default function AssetTracker() {
       const result = await apiPost({action:"addTodo", payload:{
         content, done:false, created_at:new Date().toISOString(), completed_at:"",
       }});
+      pendingAddIdsRef.current.add(result.id);
       setTodos(p=>[...p,result]);
       setNewTodoContent("");
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
