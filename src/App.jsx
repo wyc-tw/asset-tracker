@@ -932,7 +932,7 @@ export default function AssetTracker() {
 
   const addTodo = async () => {
     const content = newTodoContent.trim();
-    if (!content) return;
+    if (!content) { showToast("請先輸入內容","error"); return; }
     setTodoSaving(true);
     try {
       const result = await apiPost({action:"addTodo", payload:{
