@@ -1298,7 +1298,7 @@ export default function AssetTracker() {
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
             <div style={{marginBottom:14}}>
               <div style={labelSt}>要記到哪個月（補舊資料時可以改成其他月份）</div>
-              <input type="month" value={billForm.month} onChange={e=>setBillForm(f=>({...f,month:e.target.value}))} style={{...inputSt,minWidth:0}}/>
+              <input type="month" value={billForm.month} onChange={e=>setBillForm(f=>({...f,month:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
             </div>
             {billTemplates.length>0&&(
               <div style={{marginBottom:14}}>
@@ -1530,7 +1530,7 @@ export default function AssetTracker() {
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
             <div style={{marginBottom:14}}>
               <div style={labelSt}>日期</div>
-              <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm(f=>({...f,date:e.target.value}))} style={{...inputSt,minWidth:0}}/>
+              <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm(f=>({...f,date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
             </div>
             <div style={{marginBottom:14}}>
               <div style={labelSt}>金額（元）</div>
@@ -1640,7 +1640,7 @@ export default function AssetTracker() {
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                               <div>
                                 <div style={labelSt}>日期</div>
-                                <input type="date" value={editExpenseForm.date} onChange={ev=>setEditExpenseForm(f=>({...f,date:ev.target.value}))} style={{...inputSt,minWidth:0}}/>
+                                <input type="date" value={editExpenseForm.date} onChange={ev=>setEditExpenseForm(f=>({...f,date:ev.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
                               </div>
                               <div>
                                 <div style={labelSt}>金額（元）</div>
