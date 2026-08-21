@@ -2006,10 +2006,6 @@ export default function AssetTracker() {
           padding:18,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"
         }}>
           <div style={{flexShrink:0}}>
-            <div style={{fontSize:11,color:T.muted,marginBottom:4}}>總資產</div>
-            <div style={{fontSize:22,fontWeight:900,letterSpacing:-1}}>{fmt(totalValue)}</div>
-          </div>
-          <div style={{flexShrink:0}}>
             <DonutChart data={bankBreakdown} colors={Object.values(BANK_COLORS)} size={120}/>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:0,flex:1}}>
