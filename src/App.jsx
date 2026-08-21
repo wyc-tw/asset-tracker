@@ -349,15 +349,15 @@ function ConfirmModal({show, title, message, confirmLabel="確認", onConfirm, o
         <div style={{width:36,height:4,borderRadius:2,background:T.border,margin:"0 auto 20px"}}/>
         <h3 style={{margin:"0 0 8px",fontSize:18,fontWeight:800}}>{title}</h3>
         {message&&<p style={{margin:"0 0 20px",fontSize:13,color:T.muted,lineHeight:1.6}}>{message}</p>}
-        <div style={{display:"flex",gap:10}}>
+        <div style={{display:"flex",gap:10,flexWrap:"nowrap"}}>
           <button onClick={onConfirm} style={{
-            flex:1,background:T.accent,color:"#fff",border:"none",
+            flex:"1 1 auto",minWidth:0,background:T.accent,color:"#fff",border:"none",
             borderRadius:12,padding:"13px 0",fontSize:15,fontWeight:700,
-            cursor:"pointer",fontFamily:"inherit"
+            cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"
           }}>{confirmLabel}</button>
           <button onClick={onCancel} style={{
-            flex:0,background:T.card,color:T.muted,border:`1px solid ${T.border}`,
-            borderRadius:12,padding:"13px 20px",fontSize:15,
+            flex:"0 0 auto",background:T.card,color:T.muted,border:`1px solid ${T.border}`,
+            borderRadius:12,padding:"13px 20px",fontSize:15,whiteSpace:"nowrap",
             cursor:"pointer",fontFamily:"inherit"
           }}>取消</button>
         </div>
@@ -381,7 +381,7 @@ function TagNav({currentPage, setPage}) {
     <div style={{display:"flex",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
       {NAV_TABS.map(tab=>{
         const active = tab.group ? tab.group.includes(currentPage) : currentPage===tab.key;
-        const onClick = tab.group ? ()=>setPage("main") : ()=>setPage(active?"todos":tab.key);
+        const onClick = tab.group ? ()=>setPage("main") : ()=>{ if(!active) setPage(tab.key); };
         return (
           <button key={tab.key}
             onClick={onClick}
