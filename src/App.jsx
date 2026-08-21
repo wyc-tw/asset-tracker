@@ -426,7 +426,7 @@ export default function AssetTracker() {
   const [newTemplateName,setNewTemplateName] = useState("");
   const [newTemplateDueDay,setNewTemplateDueDay] = useState("");
   const [newTemplateAutoDebit,setNewTemplateAutoDebit] = useState(false);
-  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:"",month:billsMonth});
+  const [billForm,setBillForm] = useState({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:"",note:"",month:billsMonth});
   const [expenses,setExpenses] = useState([]);
   const [expensesMonth,setExpensesMonth] = useState(()=>{
     const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -769,16 +769,16 @@ export default function AssetTracker() {
       const result = await apiPost({action:"addBill", payload:{
         template_id: billForm.template_id||"",
         name, month: billForm.month||billsMonth, amount: amt,
-        paid: !!billForm.auto_debit,
+        paid: !!billForm.auto_debit || !!billForm.paid_date,
         due_day: billForm.due_day?parseInt(billForm.due_day,10):"",
-        paid_date: billForm.auto_debit? new Date().toISOString().slice(0,10) : "",
+        paid_date: billForm.auto_debit? new Date().toISOString().slice(0,10) : (billForm.paid_date||""),
         note: billForm.note||"",
         auto_debit: !!billForm.auto_debit,
       }});
       pendingAddIdsRef.current.add(result.id);
       setBills(p=>[...p,result]);
       // 補歷史資料時常常會連續新增好幾筆同一個月，所以月份保留、其他欄位清空
-      setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,note:"",month:f.month}));
+      setBillForm(f=>({template_id:"",name:"",amount:"",due_day:"",auto_debit:false,paid_date:"",note:"",month:f.month}));
       showToast(`已新增到 ${billForm.month||billsMonth}`);
     } catch(e) { showToast("新增失敗："+e.message,"error"); }
     setBillSaving(false);
@@ -797,7 +797,7 @@ export default function AssetTracker() {
 
   const startEditBill = (b) => {
     setEditingBillId(b.id);
-    setEditBillForm({name:b.name||"", amount:b.amount||"", due_day:b.due_day||"", auto_debit:!!b.auto_debit, note:b.note||""});
+    setEditBillForm({name:b.name||"", amount:b.amount||"", due_day:b.due_day||"", auto_debit:!!b.auto_debit, paid_date:b.paid_date||"", note:b.note||""});
   };
   const saveEditBill = async (id) => {
     const payload = {
@@ -805,6 +805,8 @@ export default function AssetTracker() {
       amount: parseFloat(editBillForm.amount)||0,
       due_day: editBillForm.due_day?parseInt(editBillForm.due_day,10):"",
       auto_debit: !!editBillForm.auto_debit,
+      paid_date: editBillForm.auto_debit? (editBillForm.paid_date||new Date().toISOString().slice(0,10)) : (editBillForm.paid_date||""),
+      paid: !!editBillForm.auto_debit || !!editBillForm.paid_date,
       note: editBillForm.note||"",
     };
     setBills(p=>p.map(b=>b.id===id?{...b,...payload}:b));
@@ -1343,20 +1345,24 @@ export default function AssetTracker() {
                 style={inputSt}
               />
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-              <div>
-                <div style={labelSt}>金額（元）</div>
-                <input type="text" inputMode="decimal" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
-              </div>
-              <div>
-                <div style={labelSt}>到期日（幾號，選填）</div>
-                <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={inputSt}/>
-              </div>
+            <div style={{marginBottom:14}}>
+              <div style={labelSt}>金額（元）</div>
+              <input type="text" inputMode="decimal" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
             </div>
             <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.muted,marginBottom:14,cursor:"pointer"}}>
               <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
               自動扣款（不用手動勾已繳）
             </label>
+            {!billForm.auto_debit&&(
+              <div style={{marginBottom:14}}>
+                <div style={labelSt}>繳費日（選填）</div>
+                <input type="date" value={billForm.paid_date} onChange={e=>setBillForm(f=>({...f,paid_date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
+              </div>
+            )}
+            <div style={{marginBottom:14}}>
+              <div style={{...labelSt,opacity:0.6}}>到期日（幾號，選填，帳單上有寫才需要填）</div>
+              <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
+            </div>
             <div style={{marginBottom:14}}>
               <div style={labelSt}>備註（選填）</div>
               <input value={billForm.note} onChange={e=>setBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
@@ -1385,20 +1391,24 @@ export default function AssetTracker() {
                       <div style={labelSt}>名稱</div>
                       <input value={editBillForm.name} onChange={e=>setEditBillForm(f=>({...f,name:e.target.value}))} style={inputSt}/>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      <div>
-                        <div style={labelSt}>金額（元）</div>
-                        <input type="text" inputMode="decimal" value={editBillForm.amount} onChange={e=>setEditBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
-                      </div>
-                      <div>
-                        <div style={labelSt}>到期日（幾號，選填）</div>
-                        <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={inputSt}/>
-                      </div>
+                    <div>
+                      <div style={labelSt}>金額（元）</div>
+                      <input type="text" inputMode="decimal" value={editBillForm.amount} onChange={e=>setEditBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
                     </div>
                     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.muted,cursor:"pointer"}}>
                       <input type="checkbox" checked={editBillForm.auto_debit} onChange={e=>setEditBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
                       自動扣款
                     </label>
+                    {!editBillForm.auto_debit&&(
+                      <div>
+                        <div style={labelSt}>繳費日（選填）</div>
+                        <input type="date" value={editBillForm.paid_date} onChange={e=>setEditBillForm(f=>({...f,paid_date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
+                      </div>
+                    )}
+                    <div>
+                      <div style={{...labelSt,opacity:0.6}}>到期日（幾號，選填）</div>
+                      <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
+                    </div>
                     <div>
                       <div style={labelSt}>備註（選填）</div>
                       <input value={editBillForm.note} onChange={e=>setEditBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
