@@ -1336,36 +1336,35 @@ export default function AssetTracker() {
                 </div>
               </div>
             )}
-            <div style={{marginBottom:14}}>
-              <div style={labelSt}>帳單名稱</div>
-              <input
-                value={billForm.name}
-                onChange={e=>setBillForm(f=>({...f,name:e.target.value,template_id:""}))}
-                placeholder="例如：星展信用卡、電話費"
-                style={inputSt}
-              />
-            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+              <div>
+                <div style={labelSt}>帳單名稱</div>
+                <input
+                  value={billForm.name}
+                  onChange={e=>setBillForm(f=>({...f,name:e.target.value,template_id:""}))}
+                  placeholder="例如：星展信用卡"
+                  style={inputSt}
+                />
+              </div>
               <div>
                 <div style={labelSt}>金額（元）</div>
                 <input type="text" inputMode="decimal" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
               </div>
-              <div>
-                <div style={{...labelSt,opacity:0.6}}>到期日（幾號，選填）</div>
-                <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
-              </div>
             </div>
             <div style={{display:"flex",alignItems:"flex-end",gap:8,marginBottom:14}}>
-              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.muted,cursor:"pointer",flexShrink:0,paddingBottom:9,whiteSpace:"nowrap"}}>
-                <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
-                自動扣款
-              </label>
+              <div style={{flexShrink:0,paddingBottom:9}}>
+                <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))} style={{width:18,height:18,cursor:"pointer",display:"block"}}/>
+              </div>
               {!billForm.auto_debit&&(
                 <div style={{flex:1,minWidth:0}}>
                   <div style={labelSt}>繳費日（選填）</div>
                   <input type="date" value={billForm.paid_date} onChange={e=>setBillForm(f=>({...f,paid_date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
                 </div>
               )}
+              <div style={{width:76,flexShrink:0}}>
+                <div style={{...labelSt,opacity:0.6}}>到期日</div>
+                <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
+              </div>
             </div>
             <div style={{marginBottom:14}}>
               <div style={labelSt}>備註（選填）</div>
@@ -1391,31 +1390,30 @@ export default function AssetTracker() {
                     background:T.surface,borderRadius:12,border:`1px solid ${T.accent}40`,
                     padding:"12px 14px",display:"flex",flexDirection:"column",gap:8
                   }}>
-                    <div>
-                      <div style={labelSt}>名稱</div>
-                      <input value={editBillForm.name} onChange={e=>setEditBillForm(f=>({...f,name:e.target.value}))} style={inputSt}/>
-                    </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div>
+                        <div style={labelSt}>名稱</div>
+                        <input value={editBillForm.name} onChange={e=>setEditBillForm(f=>({...f,name:e.target.value}))} style={inputSt}/>
+                      </div>
                       <div>
                         <div style={labelSt}>金額（元）</div>
                         <input type="text" inputMode="decimal" value={editBillForm.amount} onChange={e=>setEditBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
                       </div>
-                      <div>
-                        <div style={{...labelSt,opacity:0.6}}>到期日（幾號，選填）</div>
-                        <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
-                      </div>
                     </div>
                     <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
-                      <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.muted,cursor:"pointer",flexShrink:0,paddingBottom:9,whiteSpace:"nowrap"}}>
-                        <input type="checkbox" checked={editBillForm.auto_debit} onChange={e=>setEditBillForm(f=>({...f,auto_debit:e.target.checked}))}/>
-                        自動扣款
-                      </label>
+                      <div style={{flexShrink:0,paddingBottom:9}}>
+                        <input type="checkbox" checked={editBillForm.auto_debit} onChange={e=>setEditBillForm(f=>({...f,auto_debit:e.target.checked}))} style={{width:18,height:18,cursor:"pointer",display:"block"}}/>
+                      </div>
                       {!editBillForm.auto_debit&&(
                         <div style={{flex:1,minWidth:0}}>
                           <div style={labelSt}>繳費日（選填）</div>
                           <input type="date" value={editBillForm.paid_date} onChange={e=>setEditBillForm(f=>({...f,paid_date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
                         </div>
                       )}
+                      <div style={{width:76,flexShrink:0}}>
+                        <div style={{...labelSt,opacity:0.6}}>到期日</div>
+                        <input type="number" min="1" max="31" value={editBillForm.due_day} onChange={e=>setEditBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
+                      </div>
                     </div>
                     <div>
                       <div style={labelSt}>備註（選填）</div>
