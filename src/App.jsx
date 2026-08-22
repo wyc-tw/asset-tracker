@@ -1312,10 +1312,6 @@ export default function AssetTracker() {
 
           {/* ＋ 新增帳單（完全手動，不會有任何自動觸發） */}
           <div style={{background:T.surface,borderRadius:16,border:`1px solid ${T.border}`,padding:16,marginBottom:16}}>
-            <div style={{marginBottom:14}}>
-              <div style={labelSt}>要記到哪個月（補舊資料時可以改成其他月份）</div>
-              <input type="month" value={billForm.month} onChange={e=>setBillForm(f=>({...f,month:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
-            </div>
             {billTemplates.length>0&&(
               <div style={{marginBottom:14}}>
                 <div style={labelSt}>常用名稱（點選快速帶入）</div>
@@ -1338,6 +1334,10 @@ export default function AssetTracker() {
             )}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
               <div>
+                <div style={labelSt}>月份帳單</div>
+                <input type="month" value={billForm.month} onChange={e=>setBillForm(f=>({...f,month:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
+              </div>
+              <div>
                 <div style={labelSt}>帳單名稱</div>
                 <input
                   value={billForm.name}
@@ -1346,29 +1346,31 @@ export default function AssetTracker() {
                   style={inputSt}
                 />
               </div>
-              <div>
-                <div style={labelSt}>金額（元）</div>
-                <input type="text" inputMode="decimal" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
-              </div>
             </div>
-            <div style={{display:"flex",alignItems:"flex-end",gap:8,marginBottom:14}}>
-              <div style={{flexShrink:0,paddingBottom:9}}>
-                <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))} style={{width:18,height:18,cursor:"pointer",display:"block"}}/>
-              </div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:8,marginBottom:10}}>
               {!billForm.auto_debit&&(
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={labelSt}>繳費日（選填）</div>
+                  <div style={labelSt}>繳費日（打勾為自動扣款）</div>
                   <input type="date" value={billForm.paid_date} onChange={e=>setBillForm(f=>({...f,paid_date:e.target.value}))} style={{...inputSt,minWidth:0,width:"100%",WebkitAppearance:"none",appearance:"none"}}/>
                 </div>
               )}
+              <div style={{flexShrink:0,paddingBottom:9}}>
+                <input type="checkbox" checked={billForm.auto_debit} onChange={e=>setBillForm(f=>({...f,auto_debit:e.target.checked}))} style={{width:18,height:18,cursor:"pointer",display:"block"}}/>
+              </div>
               <div style={{width:76,flexShrink:0}}>
                 <div style={{...labelSt,opacity:0.6}}>到期日</div>
                 <input type="number" min="1" max="31" value={billForm.due_day} onChange={e=>setBillForm(f=>({...f,due_day:e.target.value}))} style={{...inputSt,fontSize:13}}/>
               </div>
             </div>
-            <div style={{marginBottom:14}}>
-              <div style={labelSt}>備註（選填）</div>
-              <input value={billForm.note} onChange={e=>setBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              <div>
+                <div style={labelSt}>金額（元）</div>
+                <input type="text" inputMode="decimal" placeholder="0" value={billForm.amount} onChange={e=>setBillForm(f=>({...f,amount:e.target.value}))} style={inputSt}/>
+              </div>
+              <div>
+                <div style={labelSt}>備註（選填）</div>
+                <input value={billForm.note} onChange={e=>setBillForm(f=>({...f,note:e.target.value}))} style={inputSt}/>
+              </div>
             </div>
             <button onClick={addBillEntry} disabled={billSaving} style={{
               width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:12,
